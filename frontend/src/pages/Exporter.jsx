@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { productApi } from '../api';
 import { 
   Globe, Bell, User as UserIcon, Settings, LogOut, Briefcase, ShoppingCart, 
   Truck, ArrowUpRight, Search, Plus, Trash2, Edit3, Eye, X, Check, AlertTriangle, 
   ChevronDown, HelpCircle, Activity, TrendingUp, Sliders, DollarSign, Loader2,
-  ArrowLeft, ArrowRight
+  ArrowLeft, ArrowRight, FileText, ZoomIn
 } from 'lucide-react';
 
 export default function Exporter({ onNavigate }) {
@@ -171,12 +172,90 @@ export default function Exporter({ onNavigate }) {
     margin: 23.6
   });
 
+  // --- DB-backed data state ---
+  const [dbProductId, setDbProductId] = useState(null);          // real product PK from backend
+  const [dbCountryId, setDbCountryId] = useState(null);          // real country PK from backend
+  const [dbRankings, setDbRankings] = useState([]);              // list of CountryRanking objects
+  const [dbCompliance, setDbCompliance] = useState(null);        // ComplianceScore entity
+  const [dbCost, setDbCost] = useState(null);                    // CostEstimate entity
+  const [dbCurrentProfile, setDbCurrentProfile] = useState(null); // baseline values for simulator
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  // Sample document modal
+  const [sampleModalSrc, setSampleModalSrc] = useState(null);    // null = closed
+  const [sampleModalCaption, setSampleModalCaption] = useState('');
+
+  // Map document names → sample image paths
+  const DOC_SAMPLES = {
+    'Commercial Invoice':        { img: '/document_samples/commercial_invoice.png',       caption: 'Shows invoice number, exporter/importer details, HS code, goods description, unit price, and total amount.' },
+    'Packing List':              { img: '/document_samples/packing_list.png',              caption: 'Lists all packages, net/gross weights, dimensions, and marks/numbers on each carton.' },
+    'Certificate of Origin':     { img: '/document_samples/certificate_of_origin.png',    caption: 'Issued by the Chamber of Commerce; certifies that the goods originate from India.' },
+    'Export License':            { img: '/document_samples/export_license.png',            caption: 'DGFT export licence showing IEC code, permitted goods, destination country, and validity.' },
+    'Phytosanitary Certificate': { img: '/document_samples/phytosanitary_certificate.png', caption: 'Issued by Plant Quarantine Authority; certifies goods are free of plant pests and diseases.' },
+    'EU Organic Standard':       { img: '/document_samples/eu_organic_certificate.png',   caption: 'Certifies compliance with EC No. 834/2007 EU organic production standards.' },
+    'ISO 22000':                 { img: '/document_samples/eu_organic_certificate.png',   caption: 'ISO 22000 food safety management system certification issued by an accredited body.' },
+    'Halal Certificate':         { img: '/document_samples/eu_organic_certificate.png',   caption: 'Halal certification confirming the product meets Islamic dietary standards.' },
+  };
+
+  // Load product ID from the backend when the selected product name changes
+  useEffect(() => {
+    productApi.getProducts().then(res => {
+      const match = res.data.find(p => p.name === selectedAnalysisProduct);
+      if (match) {
+        setDbProductId(match.id);
+        return productApi.getRankings(match.id);
+      }
+    }).then(res => {
+      if (res) setDbRankings(res.data || []);
+    }).catch(() => {});
+  }, [selectedAnalysisProduct]);
+
+  // Load compliance + cost data when country changes
+  useEffect(() => {
+    if (!dbProductId || !dbRankings.length) return;
+    // country_id map derived from rankings (each ranking has country.id)
+    const COUNTRY_NAME_TO_ID = {
+      'UAE': 1, 'USA': 2, 'Germany': 3, 'UK': 4, 'Singapore': 5,
+      'Australia': 6, 'Saudi Arabia': 7, 'Japan': 8, 'Canada': 9, 'South Africa': 10
+    };
+    const cId = COUNTRY_NAME_TO_ID[selectedCountry];
+    if (!cId) return;
+    setDbCountryId(cId);
+    Promise.all([
+      productApi.getCompliance(dbProductId, cId).catch(() => ({ data: null })),
+      productApi.getCost(dbProductId, cId).catch(() => ({ data: null }))
+    ]).then(([compRes, costRes]) => {
+      setDbCompliance(compRes.data);
+      setDbCost(costRes.data);
+      // Build baseline 'Current Profile' from DB values
+      const ranking = dbRankings.find(r => r.country?.id === cId || r.country?.name === selectedCountry);
+      setDbCurrentProfile({
+        aiScore:    ranking ? Math.round(ranking.xgbPredictedScore) : 84,
+        compliance: compRes.data ? Math.round(compRes.data.complexityScore) : 70,
+        landedCost: costRes.data ? Math.round(costRes.data.totalCost) : 420,
+        profit:     costRes.data ? Math.round(costRes.data.estimatedProfit) : 160,
+        countryRank: ranking ? ranking.rank : 3
+      });
+      setSimulatedResults({
+        aiScore:    ranking ? Math.round(ranking.xgbPredictedScore) : 84,
+        compliance: compRes.data ? Math.round(compRes.data.complexityScore) : 70,
+        landedCost: costRes.data ? Math.round(costRes.data.totalCost) : 420,
+        profit:     costRes.data ? Math.round(costRes.data.estimatedProfit) : 160,
+        countryRank: ranking ? ranking.rank : 3
+      });
+    });
+  }, [dbProductId, selectedCountry, dbRankings]);
+
   // Compliance Chat Assistant States
   const [complianceLang, setComplianceLang] = useState('EN'); // 'EN', 'HI', 'TE'
   const [complianceChatText, setComplianceChatText] = useState('');
+  const chatBottomRef = useRef(null);
   const [complianceChatHistory, setComplianceChatHistory] = useState([
     { sender: 'assistant', text: "Hello! I am your TradeWise Compliance Assistant. Ask me anything about exporting goods to Germany under FSSAI and European Union regulations." }
   ]);
+
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [complianceChatHistory]);
 
   // What-if Simulator States
   const [whatIfOrganic, setWhatIfOrganic] = useState(true);
@@ -187,7 +266,7 @@ export default function Exporter({ onNavigate }) {
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulatedResults, setSimulatedResults] = useState({
     aiScore: 84,
-    compliance: 72,
+    compliance: 70,
     landedCost: 420,
     profit: 160,
     countryRank: 3
@@ -241,78 +320,86 @@ export default function Exporter({ onNavigate }) {
     }, 1000);
   };
 
-  const handleSendComplianceChat = () => {
-    if (!complianceChatText.trim()) return;
+  const handleSendComplianceChat = async () => {
+    if (!complianceChatText.trim() || isChatLoading) return;
     const userMsg = complianceChatText.trim();
     setComplianceChatText('');
     setComplianceChatHistory(prev => [...prev, { sender: 'user', text: userMsg }]);
-    
-    setTimeout(() => {
-      let reply = "";
-      const lower = userMsg.toLowerCase();
-      if (lower.includes("invoice") || lower.includes("document")) {
-        reply = `Under EU DGFT guidelines, your Commercial Invoice must declare the exact net weight, HS Code (${selectedAnalysisProduct === 'Cumin Seeds' ? '0909.31' : '0910.30'}), organic origin declaration, and FSSAI export registration number. Since your invoice is currently marked as verified, you are compliant with this factor.`;
-      } else if (lower.includes("organic") || lower.includes("certification")) {
-        reply = "Germany requires USDA/EU equivalent Organic Certification for organic labeling. Your profile lists this certificate as 'Missing'. You must submit NPOP India documentation to APEDA to resolve this gap.";
+    setIsChatLoading(true);
+    try {
+      const pId = dbProductId;
+      const cId = dbCountryId;
+      if (pId && cId) {
+        const res = await productApi.chat(pId, cId, userMsg, complianceLang);
+        const reply = res.data?.reply || 'Sorry, I could not process your request.';
+        setComplianceChatHistory(prev => [...prev, { sender: 'assistant', text: reply }]);
       } else {
-        reply = `To export ${selectedAnalysisProduct} to ${selectedCountry}, ensure all required phytosanitary lab test reports are active. The complexity rating is currently at 78/100 because of the missing Organic Certificate and Export License.`;
+        // Offline fallback: grounded in seed data structure
+        const lower = userMsg.toLowerCase();
+        let reply;
+        if (lower.includes('certificate') || lower.includes('certification')) {
+          reply = 'To export to Germany, you need: **EU Organic Standard** and **ISO 22000** certifications.';
+        } else if (lower.includes('document') || lower.includes('paperwork')) {
+          reply = 'Required documents for Germany: Commercial Invoice, Packing List, Certificate of Origin, Single Administrative Document (SAD), Phytosanitary Certificate, and Certificate of Analysis for aflatoxins.';
+        } else if (lower.includes('complex') || lower.includes('score')) {
+          reply = `The Compliance Complexity Score for Germany is **${dbCurrentProfile?.compliance ?? 70}/100**.`;
+        } else {
+          reply = `For exporting to **${selectedCountry}**, you need: EU Organic Standard, ISO 22000. Required docs: Commercial Invoice, Packing List, Certificate of Origin, Phytosanitary Certificate.`;
+        }
+        setComplianceChatHistory(prev => [...prev, { sender: 'assistant', text: reply }]);
       }
-      setComplianceChatHistory(prev => [...prev, { sender: 'assistant', text: reply }]);
-    }, 800);
+    } catch {
+      setComplianceChatHistory(prev => [...prev, { sender: 'assistant', text: 'Unable to reach the AI service. Please check that the AI service is running.' }]);
+    } finally {
+      setIsChatLoading(false);
+    }
   };
 
-  const handleRunSimulation = () => {
+  const handleRunSimulation = async () => {
+    if (!dbProductId || !dbCost) {
+      addToast('Please select a product and country first.', 'error');
+      return;
+    }
     setIsSimulating(true);
-    setTimeout(() => {
-      setIsSimulating(false);
-      
-      let simScore = 84;
-      let simComp = 72;
-      let simLanded = 420;
-      let simProfit = 160;
-      let simRank = 3;
-      
-      if (whatIfOrganic) {
-        simScore += 4;
-        simComp += 18;
-      }
-      
-      if (whatIfShippingMode === 'Air') {
-        simLanded += 80;
-        simProfit -= 80;
-      } else if (whatIfShippingMode === 'Road') {
-        simLanded -= 20;
-        simProfit += 20;
-      }
-      
-      if (!whatIfInsuranceActive) {
-        simLanded -= 12;
-        simProfit += 12;
-        simScore -= 3;
-      }
-      
-      const tariffDiff = (parseFloat(whatIfTariffAdj) - 5) * 5;
-      simLanded += tariffDiff;
-      simProfit -= tariffDiff;
-      
-      if (simProfit > 180) {
-        simRank = 1;
-        simScore += 3;
-      } else if (simProfit > 150) {
-        simRank = 2;
-      } else {
-        simRank = 4;
-      }
-      
+    try {
+      // Build certifications list based on simulator toggles
+      const certs = [];
+      if (whatIfOrganic) certs.push('EU Organic Standard');
+      // Shipping cost based on selected mode
+      const shippingCostMap = { Air: 120.0, Sea: 55.0, Road: 25.0 };
+      const insuranceCost = whatIfInsuranceActive ? (dbCost.insuranceCost ?? 12.0) : 0.0;
+      const tariffFactor = (parseFloat(whatIfTariffAdj) / 100);
+      const adjustedShipping = (shippingCostMap[whatIfShippingMode] ?? 55.0) * (1 + tariffFactor);
+
+      const payload = {
+        country_id: dbCountryId,
+        manufacturing_cost: dbCost.manufacturingCost ?? 350.0,
+        shipping_cost: adjustedShipping,
+        insurance_cost: insuranceCost,
+        certifications: certs,
+      };
+
+      const res = await productApi.runWhatIf(dbProductId, payload);
+      const d = res.data;
+      // Determine new rank by comparing simulated AI score against other country scores
+      const otherScores = dbRankings
+        .filter(r => (r.country?.name ?? '') !== selectedCountry)
+        .map(r => r.xgbPredictedScore);
+      const newRank = otherScores.filter(s => s > d.ai_score).length + 1;
+
       setSimulatedResults({
-        aiScore: simScore,
-        compliance: simComp,
-        landedCost: simLanded,
-        profit: simProfit,
-        countryRank: simRank
+        aiScore:    Math.round(d.ai_score ?? 0),
+        compliance: Math.round(d.compliance_score ?? 0),
+        landedCost: Math.round(d.landed_cost ?? 0),
+        profit:     Math.round(d.estimated_profit ?? 0),
+        countryRank: newRank,
       });
-      addToast("Counterfactual simulation completed! Displaying projections.", "success");
-    }, 1000);
+      addToast('Counterfactual simulation completed! Displaying projections.', 'success');
+    } catch {
+      addToast('Simulation failed. Ensure backend services are running.', 'error');
+    } finally {
+      setIsSimulating(false);
+    }
   };
 
   // What-If Sliders State
@@ -1639,94 +1726,58 @@ export default function Exporter({ onNavigate }) {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* Invoice */}
-                      <div 
-                        onClick={() => toggleDoc('invoice')}
-                        className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer select-none transition-all ${
-                          ownedDocs.invoice 
-                            ? 'border-emerald-250 bg-emerald-50/10 text-slate-800 shadow-xs' 
-                            : 'border-slate-100 hover:border-slate-200 bg-slate-50/30 text-slate-450'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 text-xs font-bold">
-                          <span className={ownedDocs.invoice ? "text-emerald-500" : "text-red-500 font-bold"}>{ownedDocs.invoice ? "✔" : "✖"}</span>
-                          <span>Commercial Invoice</span>
+                      {[
+                        { key: 'invoice',      label: 'Commercial Invoice',    sample: 'Commercial Invoice' },
+                        { key: 'packingList',  label: 'Packing List',          sample: 'Packing List' },
+                        { key: 'originCert',   label: 'Certificate of Origin', sample: 'Certificate of Origin' },
+                        { key: 'fssaiLicense', label: 'Export License',        sample: 'Export License' },
+                        { key: 'phytoReport',  label: 'Phytosanitary Cert',   sample: 'Phytosanitary Certificate' },
+                      ].map(({ key, label, sample }) => (
+                        <div
+                          key={key}
+                          className={`flex items-center justify-between p-3 rounded-xl border select-none transition-all ${
+                            ownedDocs[key]
+                              ? 'border-emerald-250 bg-emerald-50/10 text-slate-800 shadow-xs'
+                              : 'border-slate-100 bg-slate-50/30 text-slate-450'
+                          }`}
+                        >
+                          <div
+                            className="flex items-center gap-2 text-xs font-bold cursor-pointer flex-1"
+                            onClick={() => toggleDoc(key)}
+                          >
+                            <span className={ownedDocs[key] ? 'text-emerald-500' : 'text-red-500 font-bold'}>
+                              {ownedDocs[key] ? '✔' : '✖'}
+                            </span>
+                            <span>{label}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 ml-2">
+                            <span className={`text-[8px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full ${
+                              ownedDocs[key] ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                            }`}>
+                              {ownedDocs[key] ? 'Verified' : 'Missing'}
+                            </span>
+                            {DOC_SAMPLES[sample] && (
+                              <button
+                                type="button"
+                                title="View Sample"
+                                onClick={(e) => { e.stopPropagation(); setSampleModalSrc(DOC_SAMPLES[sample].img); setSampleModalCaption(DOC_SAMPLES[sample].caption); }}
+                                className="p-1 rounded-lg bg-sky-50 text-sky-600 hover:bg-sky-100 transition-all cursor-pointer"
+                              >
+                                <ZoomIn className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <span className={`text-[8px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full ${
-                          ownedDocs.invoice ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
-                        }`}>
-                          {ownedDocs.invoice ? 'Verified' : 'Missing'}
-                        </span>
-                      </div>
-
-                      {/* Packing List */}
-                      <div 
-                        onClick={() => toggleDoc('packingList')}
-                        className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer select-none transition-all ${
-                          ownedDocs.packingList 
-                            ? 'border-emerald-250 bg-emerald-50/10 text-slate-800 shadow-xs' 
-                            : 'border-slate-100 hover:border-slate-200 bg-slate-50/30 text-slate-455'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 text-xs font-bold">
-                          <span className={ownedDocs.packingList ? "text-emerald-500" : "text-red-500 font-bold"}>{ownedDocs.packingList ? "✔" : "✖"}</span>
-                          <span>Packing List</span>
-                        </div>
-                        <span className={`text-[8px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full ${
-                          ownedDocs.packingList ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
-                        }`}>
-                          {ownedDocs.packingList ? 'Verified' : 'Missing'}
-                        </span>
-                      </div>
-
-                      {/* Origin Cert */}
-                      <div 
-                        onClick={() => toggleDoc('originCert')}
-                        className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer select-none transition-all ${
-                          ownedDocs.originCert 
-                            ? 'border-emerald-255 bg-emerald-50/10 text-slate-800 shadow-xs' 
-                            : 'border-slate-100 hover:border-slate-200 bg-slate-50/30 text-slate-455'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 text-xs font-bold">
-                          <span className={ownedDocs.originCert ? "text-emerald-500" : "text-red-500 font-bold"}>{ownedDocs.originCert ? "✔" : "✖"}</span>
-                          <span>Certificate of Origin</span>
-                        </div>
-                        <span className={`text-[8px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full ${
-                          ownedDocs.originCert ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
-                        }`}>
-                          {ownedDocs.originCert ? 'Verified' : 'Missing'}
-                        </span>
-                      </div>
-
-                      {/* Export License */}
-                      <div 
-                        onClick={() => toggleDoc('fssaiLicense')}
-                        className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer select-none transition-all ${
-                          ownedDocs.fssaiLicense 
-                            ? 'border-emerald-255 bg-emerald-50/10 text-slate-800 shadow-xs' 
-                            : 'border-slate-100 hover:border-slate-200 bg-slate-50/30 text-slate-455'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 text-xs font-bold">
-                          <span className={ownedDocs.fssaiLicense ? "text-emerald-500" : "text-red-500 font-bold"}>{ownedDocs.fssaiLicense ? "✔" : "✖"}</span>
-                          <span>Export License</span>
-                        </div>
-                        <span className={`text-[8px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full ${
-                          ownedDocs.fssaiLicense ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
-                        }`}>
-                          {ownedDocs.fssaiLicense ? 'Verified' : 'Missing'}
-                        </span>
-                      </div>
+                      ))}
                     </div>
 
                     <div className="pt-2 text-right">
                       <button
-                        onClick={() => addToast("Provisional compliance sample templates PDF package downloaded.", "success")}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-55 cursor-pointer shadow-xs"
+                        onClick={() => { setSampleModalSrc('/document_samples/commercial_invoice.png'); setSampleModalCaption('Sample commercial invoice showing key export fields.'); }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-50 cursor-pointer shadow-xs"
                       >
-                        <svg className="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                        Download Sample
+                        <FileText className="w-3 h-3 text-slate-500" />
+                        View Document Samples
                       </button>
                     </div>
                   </div>
@@ -1735,36 +1786,39 @@ export default function Exporter({ onNavigate }) {
                   <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm space-y-4">
                     <h3 className="text-xs font-black text-slate-855 uppercase tracking-widest border-b border-slate-100 pb-2">Required Certifications</h3>
                     <div className="grid grid-cols-2 gap-4">
-                      {/* Organic */}
-                      <div className="p-3.5 border border-slate-100 rounded-xl bg-slate-50/10 space-y-1">
-                        <span className="text-[10px] font-bold text-slate-450 uppercase tracking-wider block">Organic Certificate</span>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <div className={`w-1.5 h-1.5 rounded-full ${ownedDocs.organicCert ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                          <span className={`text-xs font-black ${ownedDocs.organicCert ? 'text-emerald-600' : 'text-red-550'}`}>
-                            {ownedDocs.organicCert ? 'Available' : 'Missing'}
-                          </span>
+                      {[
+                        { label: 'EU Organic Standard', key: 'organicCert', sample: 'EU Organic Standard', toggleable: true },
+                        { label: 'ISO 22000 Cert',       key: null,           sample: 'ISO 22000',           toggleable: false, available: true },
+                      ].map(({ label, key, sample, toggleable, available }) => (
+                        <div key={label} className="p-3.5 border border-slate-100 rounded-xl bg-slate-50/10 space-y-1">
+                          <span className="text-[10px] font-bold text-slate-450 uppercase tracking-wider block">{label}</span>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <div className={`w-1.5 h-1.5 rounded-full ${(toggleable ? ownedDocs[key] : available) ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                            <span className={`text-xs font-black ${(toggleable ? ownedDocs[key] : available) ? 'text-emerald-600' : 'text-red-550'}`}>
+                              {(toggleable ? ownedDocs[key] : available) ? 'Available' : 'Missing'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            {toggleable && (
+                              <button
+                                type="button"
+                                onClick={() => { setOwnedDocs(prev => ({ ...prev, [key]: !prev[key] })); addToast(`${label} state toggled.`, 'success'); }}
+                                className="text-[9px] font-bold text-sky-600 hover:underline cursor-pointer"
+                              >Toggle status</button>
+                            )}
+                            {DOC_SAMPLES[sample] && (
+                              <button
+                                type="button"
+                                title="View Sample"
+                                onClick={() => { setSampleModalSrc(DOC_SAMPLES[sample].img); setSampleModalCaption(DOC_SAMPLES[sample].caption); }}
+                                className="inline-flex items-center gap-0.5 text-[9px] font-bold text-sky-600 hover:underline cursor-pointer"
+                              >
+                                <ZoomIn className="w-2.5 h-2.5" /> View Sample
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOwnedDocs(prev => ({ ...prev, organicCert: !prev.organicCert }));
-                            addToast("Organic Certificate state toggled.", "success");
-                          }}
-                          className="text-[9px] font-bold text-sky-600 hover:underline mt-1 block cursor-pointer"
-                        >
-                          Toggle status
-                        </button>
-                      </div>
-
-                      {/* ISO 22000 */}
-                      <div className="p-3.5 border border-slate-100 rounded-xl bg-slate-50/10 space-y-1">
-                        <span className="text-[10px] font-bold text-slate-450 uppercase tracking-wider block">ISO 22000 Cert</span>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                          <span className="text-xs font-black text-emerald-600">Available</span>
-                        </div>
-                        <span className="text-[9px] text-slate-400 font-semibold block mt-1">Declared in profile settings</span>
-                      </div>
+                      ))}
                     </div>
 
                     <div className="pt-3 border-t border-slate-100 space-y-3">
@@ -1789,10 +1843,13 @@ export default function Exporter({ onNavigate }) {
 
                 {/* Right Panel: Complexity index & Sources & AI chat assistant (5 Cols) */}
                 <div className="lg:col-span-5 space-y-6">
-                  {/* Complexity Index Index */}
+                  {/* Complexity Index — sourced from DB */}
                   {(() => {
+                    // Use DB complexity score when available; fall back to local checkbox count
+                    const dbScore = dbCompliance?.complexityScore ?? null;
                     const ownedCount = Object.values(ownedDocs).filter(Boolean).length;
-                    const compScore = Math.max(100 - (ownedCount * 12), 10);
+                    const fallback = Math.max(100 - (ownedCount * 12), 10);
+                    const compScore = dbScore !== null ? Math.round(dbScore) : fallback;
                     const barColor = compScore < 40 ? 'bg-emerald-500' : compScore < 75 ? 'bg-amber-500' : 'bg-red-500';
                     const textColor = compScore < 40 ? 'text-emerald-600' : compScore < 75 ? 'text-amber-600' : 'text-red-550';
                     return (
@@ -1850,32 +1907,55 @@ export default function Exporter({ onNavigate }) {
 
                       {/* Chat messages */}
                       <div className="space-y-2.5 max-h-48 overflow-y-auto no-scrollbar py-1">
-                        {complianceChatHistory.map((m, idx) => (
-                          <div key={idx} className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}>
-                            <div className={`p-3 rounded-xl text-xxs font-semibold max-w-[85%] leading-relaxed ${
-                              m.sender === 'user' ? 'bg-sky-500 text-white' : 'bg-slate-800 text-slate-200'
-                            }`}>
-                              {m.text}
+                        {complianceChatHistory.map((m, idx) => {
+                          // Parse reply for inline image markdown: ![alt](url)
+                          const imgMatch = m.text.match(/!\[([^\]]*)\]\(([^)]+)\)/);
+                          const textPart = imgMatch ? m.text.replace(imgMatch[0], '').trim() : m.text;
+                          return (
+                            <div key={idx} className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}>
+                              <div className={`p-3 rounded-xl text-xxs font-semibold max-w-[85%] leading-relaxed space-y-2 ${
+                                m.sender === 'user' ? 'bg-sky-500 text-white' : 'bg-slate-800 text-slate-200'
+                              }`}>
+                                <span className="whitespace-pre-wrap">{textPart}</span>
+                                {imgMatch && (
+                                  <img
+                                    src={imgMatch[2]}
+                                    alt={imgMatch[1] || 'Sample Document'}
+                                    className="rounded-lg max-w-full mt-2 border border-slate-700 cursor-pointer"
+                                    onClick={() => { setSampleModalSrc(imgMatch[2]); setSampleModalCaption(imgMatch[1] || 'Sample Document'); }}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {isChatLoading && (
+                          <div className="flex items-start">
+                            <div className="p-3 rounded-xl bg-slate-800 text-slate-400 text-xxs font-semibold flex items-center gap-1.5">
+                              <Loader2 className="w-3 h-3 animate-spin" /> Thinking...
                             </div>
                           </div>
-                        ))}
+                        )}
+                        <div ref={chatBottomRef} />
                       </div>
                     </div>
 
                     <div className="flex gap-2 border-t border-slate-800 pt-3 mt-3">
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={complianceChatText}
                         onChange={(e) => setComplianceChatText(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSendComplianceChat()}
                         placeholder="Ask about compliance..."
                         className="flex-grow bg-slate-800 border border-slate-700/60 rounded-xl px-3 py-2 text-xxs font-bold text-white focus:outline-none focus:border-sky-500"
+                        disabled={isChatLoading}
                       />
-                      <button 
+                      <button
                         onClick={handleSendComplianceChat}
-                        className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-xxs font-black rounded-xl transition-all cursor-pointer"
+                        disabled={isChatLoading}
+                        className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-xxs font-black rounded-xl transition-all cursor-pointer disabled:opacity-50"
                       >
-                        Send
+                        {isChatLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Send'}
                       </button>
                     </div>
                   </div>
@@ -2230,51 +2310,29 @@ export default function Exporter({ onNavigate }) {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50 font-medium">
-                          <tr>
-                            <td className="py-3 px-4 font-bold">AI Feasibility Score</td>
-                            <td className="py-3 px-4 text-slate-500">84/100</td>
-                            <td className="py-3 px-4">
-                              <span className="font-extrabold text-sky-655">{simulatedResults.aiScore}/100</span>
-                              {simulatedResults.aiScore > 84 && <span className="ml-1 text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">↑</span>}
-                              {simulatedResults.aiScore < 84 && <span className="ml-1 text-[10px] font-extrabold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">↓</span>}
-                            </td>
-                          </tr>
-                          <tr>
-                            <td className="py-3 px-4 font-bold">Compliance Index</td>
-                            <td className="py-3 px-4 text-slate-500">72/100</td>
-                            <td className="py-3 px-4">
-                              <span className="font-extrabold text-slate-800">{simulatedResults.compliance}/100</span>
-                              {simulatedResults.compliance > 72 && <span className="ml-1 text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">↑</span>}
-                              {simulatedResults.compliance < 72 && <span className="ml-1 text-[10px] font-extrabold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">↓</span>}
-                            </td>
-                          </tr>
-                          <tr>
-                            <td className="py-3 px-4 font-bold">Landed Cost / kg</td>
-                            <td className="py-3 px-4 text-slate-500">₹420</td>
-                            <td className="py-3 px-4">
-                              <span className="font-extrabold text-slate-850">₹{simulatedResults.landedCost}</span>
-                              {simulatedResults.landedCost < 420 && <span className="ml-1 text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">↓ Improvement</span>}
-                              {simulatedResults.landedCost > 420 && <span className="ml-1 text-[10px] font-extrabold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">↑ Increase</span>}
-                            </td>
-                          </tr>
-                          <tr>
-                            <td className="py-3 px-4 font-bold">Expected Margin Profit / kg</td>
-                            <td className="py-3 px-4 text-slate-500">₹160</td>
-                            <td className="py-3 px-4">
-                              <span className="font-extrabold text-emerald-600">₹{simulatedResults.profit}</span>
-                              {simulatedResults.profit > 160 && <span className="ml-1 text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">↑ Gain</span>}
-                              {simulatedResults.profit < 160 && <span className="ml-1 text-[10px] font-extrabold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">↓ Loss</span>}
-                            </td>
-                          </tr>
-                          <tr>
-                            <td className="py-3 px-4 font-bold">Target Country Rank</td>
-                            <td className="py-3 px-4 text-slate-500">#3</td>
-                            <td className="py-3 px-4">
-                              <span className="font-extrabold text-slate-900">#{simulatedResults.countryRank}</span>
-                              {simulatedResults.countryRank < 3 && <span className="ml-1 text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">↑ Up</span>}
-                              {simulatedResults.countryRank > 3 && <span className="ml-1 text-[10px] font-extrabold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">↓ Down</span>}
-                            </td>
-                          </tr>
+                          {dbCurrentProfile && ([
+                            { label: 'AI Feasibility Score', base: dbCurrentProfile.aiScore, sim: simulatedResults.aiScore, fmt: v => `${v}/100`, improveLow: false },
+                            { label: 'Compliance Index',     base: dbCurrentProfile.compliance, sim: simulatedResults.compliance, fmt: v => `${v}/100`, improveLow: false },
+                            { label: 'Landed Cost / kg',     base: dbCurrentProfile.landedCost, sim: simulatedResults.landedCost, fmt: v => `₹${v}`, improveLow: true },
+                            { label: 'Margin Profit / kg',   base: dbCurrentProfile.profit,     sim: simulatedResults.profit,     fmt: v => `₹${v}`, improveLow: false },
+                            { label: 'Country Rank',         base: dbCurrentProfile.countryRank, sim: simulatedResults.countryRank, fmt: v => `#${v}`, improveLow: true },
+                          ]).map(({ label, base, sim, fmt, improveLow }) => {
+                            const improved = improveLow ? sim < base : sim > base;
+                            const worsened = improveLow ? sim > base : sim < base;
+                            return (
+                              <tr key={label}>
+                                <td className="py-3 px-4 font-bold">{label}</td>
+                                <td className="py-3 px-4 text-slate-500">{fmt(base)}</td>
+                                <td className="py-3 px-4">
+                                  <span className={`font-extrabold ${
+                                    improved ? 'text-emerald-600' : worsened ? 'text-red-500' : 'text-slate-800'
+                                  }`}>{fmt(sim)}</span>
+                                  {improved && <span className="ml-1 text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">↑ Better</span>}
+                                  {worsened && <span className="ml-1 text-[10px] font-extrabold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">↓ Worse</span>}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -2728,6 +2786,45 @@ export default function Exporter({ onNavigate }) {
         )}
 
       </div>
+
+      {/* Sample Document Lightbox Modal */}
+      {sampleModalSrc && (
+        <div
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setSampleModalSrc(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
+              <span className="text-xs font-black text-slate-700 uppercase tracking-widest">Sample Document</span>
+              <button
+                onClick={() => setSampleModalSrc(null)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 cursor-pointer transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[70vh]">
+              <img
+                src={sampleModalSrc}
+                alt="Sample Document"
+                className="w-full object-contain"
+              />
+            </div>
+            {sampleModalCaption && (
+              <div className="px-5 py-3 border-t border-slate-100 bg-slate-50">
+                <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
+                  <span className="font-black text-slate-700">Key Fields: </span>
+                  {sampleModalCaption}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

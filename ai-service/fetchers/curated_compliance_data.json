@@ -1,0 +1,112 @@
+{
+  "UAE": {
+    "Spices": {
+      "required_documents": ["Commercial Invoice", "Packing List", "Certificate of Origin", "Bill of Lading", "Phytosanitary Certificate"],
+      "required_certifications": ["Halal Certificate"],
+      "packaging_rules": "Moisture-resistant double-layered polyethylene bags. Stored under clean dry conditions under 25C.",
+      "labeling_rules": "Language: English and Arabic, Production and Expiry Dates, Halal logo, Country of Origin: India.",
+      "tariff_percent": 0.0,
+      "tax_percent": 5.0,
+      "source_url": "https://www.moiat.gov.ae"
+    }
+  },
+  "USA": {
+    "Spices": {
+      "required_documents": ["Commercial Invoice", "Packing List", "Certificate of Origin", "Customs Bond", "FDA Import Entry (Form 3461)", "Phytosanitary Certificate"],
+      "required_certifications": ["FDA Food Facility Registration", "FDA Prior Notice Confirmation"],
+      "packaging_rules": "FDA-approved food contact materials, airtight containers preventing pest entry.",
+      "labeling_rules": "FPLA standards: Net weight in metric & ounces, nutrition facts panel, English text, ingredients list.",
+      "tariff_percent": 3.0,
+      "tax_percent": 2.5,
+      "source_url": "https://www.fda.gov/food/importing-food-products-united-states"
+    }
+  },
+  "Germany": {
+    "Spices": {
+      "required_documents": ["Commercial Invoice", "Packing List", "Certificate of Origin", "Single Administrative Document (SAD)", "Phytosanitary Certificate", "Certificate of Analysis for aflatoxins"],
+      "required_certifications": ["EU Organic Standard", "ISO 22000"],
+      "packaging_rules": "EU Regulation 1935/2004 food contact safety, double-walled kraft paper sacks under 25kg.",
+      "labeling_rules": "Language: German, net weight in metric, importer EU address details.",
+      "tariff_percent": 4.0,
+      "tax_percent": 7.0,
+      "source_url": "https://trade.ec.europa.eu/access-to-markets/en/content/spices-import-rules-germany"
+    }
+  },
+  "United Kingdom": {
+    "Spices": {
+      "required_documents": ["Commercial Invoice", "Packing List", "Certificate of Origin", "UK Customs Declaration", "Phytosanitary Certificate"],
+      "required_certifications": ["BRCGS Food Safety Standard", "UK Organic Certificate"],
+      "packaging_rules": "UK food contact safety standards, sealed composite containers.",
+      "labeling_rules": "English labeling, UK importer address, net weight in metric, batch number.",
+      "tariff_percent": 0.0,
+      "tax_percent": 20.0,
+      "source_url": "https://www.gov.uk/import-goods-into-uk"
+    }
+  },
+  "Singapore": {
+    "Spices": {
+      "required_documents": ["Commercial Invoice", "Packing List", "Certificate of Origin", "SFA Import Permit"],
+      "required_certifications": ["HACCP Certification", "ISO 22000"],
+      "packaging_rules": "Airtight commercial packaging preventing contamination.",
+      "labeling_rules": "English labeling, net content weight, SFA importer license ID, date of manufacture.",
+      "tariff_percent": 0.0,
+      "tax_percent": 9.0,
+      "source_url": "https://www.sfa.gov.sg/food-import-export"
+    }
+  },
+  "Australia": {
+    "Spices": {
+      "required_documents": ["Commercial Invoice", "Packing List", "Certificate of Origin", "Biosecurity Import Declaration", "Phytosanitary Certificate", "Aflatoxin Analysis Report"],
+      "required_certifications": ["DAFF import clearance"],
+      "packaging_rules": "Hermetically sealed bags preventing moisture, treated wooden pallets complying with ISPM 15.",
+      "labeling_rules": "English labeling, country of origin label, net weight, nutrition information panel.",
+      "tariff_percent": 0.0,
+      "tax_percent": 10.0,
+      "source_url": "https://www.agriculture.gov.au/biosecurity-trade/import"
+    }
+  },
+  "Saudi Arabia": {
+    "Spices": {
+      "required_documents": ["Commercial Invoice", "Packing List", "Certificate of Origin", "SASO Certificate of Conformity", "Phytosanitary Certificate", "FSSAI Export License"],
+      "required_certifications": ["SFDA Food Facility Registration", "Halal Certificate"],
+      "packaging_rules": "Food-grade sealed bags, treated pallets.",
+      "labeling_rules": "Bilingual: Arabic and English, Halal logo, importer details in KSA, production and expiry dates.",
+      "tariff_percent": 5.0,
+      "tax_percent": 15.0,
+      "source_url": "https://www.sfda.gov.sa"
+    }
+  },
+  "Japan": {
+    "Spices": {
+      "required_documents": ["Commercial Invoice", "Packing List", "Certificate of Origin", "Japan Customs Declaration", "Phytosanitary Certificate", "Inspection Certificate under Food Sanitation Act"],
+      "required_certifications": ["JAS Organic Certificate", "MHLW facility clearance"],
+      "packaging_rules": "Double-layered moisture-proof bags, insect-proof packaging.",
+      "labeling_rules": "Japanese language label, net weight in metric, allergen statements, importer info in Japan.",
+      "tariff_percent": 3.5,
+      "tax_percent": 10.0,
+      "source_url": "https://www.mhlw.go.jp/english/topics/importedfoods"
+    }
+  },
+  "Canada": {
+    "Spices": {
+      "required_documents": ["Commercial Invoice", "Packing List", "Certificate of Origin", "Canada Customs Invoice (CCI)", "Phytosanitary Certificate"],
+      "required_certifications": ["CFIA Safe Food for Canadians License", "COR Organic Standard"],
+      "packaging_rules": "CFIA food contact material standards, airtight paperboard boxes.",
+      "labeling_rules": "Bilingual: English and French, net content in metric, nutrition facts table.",
+      "tariff_percent": 2.0,
+      "tax_percent": 5.0,
+      "source_url": "https://inspection.canada.ca/food-licensing"
+    }
+  },
+  "South Africa": {
+    "Spices": {
+      "required_documents": ["Commercial Invoice", "Packing List", "Certificate of Origin", "Bill of Lading", "Phytosanitary Certificate"],
+      "required_certifications": ["Department of Health food clearance", "SABS packaging approval"],
+      "packaging_rules": "Standard woven polypropylene bags, sealed to protect from moisture.",
+      "labeling_rules": "English labeling, net mass in metric, ingredients list, country of origin: India.",
+      "tariff_percent": 5.0,
+      "tax_percent": 15.0,
+      "source_url": "https://www.gov.za"
+    }
+  }
+}
