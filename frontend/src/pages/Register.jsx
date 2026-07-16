@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, User, Building, Mail, Phone, Globe, Lock, Briefcase, ShoppingCart, Truck, ShieldCheck, ArrowLeft, ArrowRight, Loader2, Check, Plus, X } from 'lucide-react';
+import { Eye, EyeOff, User, Building, Mail, Phone, Globe, Lock, Briefcase, Truck, ShieldCheck, ArrowLeft, ArrowRight, Loader2, Check, X } from 'lucide-react';
 
 export default function Register({ onNavigate }) {
   const [step, setStep] = useState(1); // 1, 2, 3
-  const [role, setRole] = useState('exporter'); // 'exporter', 'importer', 'logistics'
+  const [role, setRole] = useState('exporter'); // 'exporter', 'logistics'
 
   // Step 1: Basic Info Form States
   const [fullName, setFullName] = useState('');
@@ -26,15 +26,7 @@ export default function Register({ onNavigate }) {
   const [exporterProducts, setExporterProducts] = useState('');
   const [exporterExp, setExporterExp] = useState('Beginner'); // Beginner, Intermediate, Experienced
 
-  // Importer Specifics
-  const [importerLicense, setImporterLicense] = useState('');
-  const [importerIndustry, setImporterIndustry] = useState('Wholesale'); // Retail, Wholesale, Distribution
-  const [importerProducts, setImporterProducts] = useState(['Spices', 'Textiles']);
-  const [importerCountries, setImporterCountries] = useState(['India']);
-  const [customProductInput, setCustomProductInput] = useState('');
-  const [customCountryInput, setCustomCountryInput] = useState('');
-  const [showAddProduct, setShowAddProduct] = useState(false);
-  const [showAddCountry, setShowAddCountry] = useState(false);
+
 
   // Logistics Specifics
   const [logisticsServices, setLogisticsServices] = useState(['Sea Freight', 'Customs Clearance']); // Air, Sea, Road, Rail, Customs, Warehousing
@@ -82,8 +74,6 @@ export default function Register({ onNavigate }) {
     const newErrors = {};
     if (role === 'exporter') {
       if (!exporterGst) newErrors.exporterGst = 'Required';
-    } else if (role === 'importer') {
-      if (!importerLicense) newErrors.importerLicense = 'Required';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -124,23 +114,7 @@ export default function Register({ onNavigate }) {
     }
   };
 
-  const handleAddCustomProduct = (e) => {
-    e.preventDefault();
-    if (customProductInput.trim() && !importerProducts.includes(customProductInput.trim())) {
-      setImporterProducts([...importerProducts, customProductInput.trim()]);
-      setCustomProductInput('');
-      setShowAddProduct(false);
-    }
-  };
 
-  const handleAddCustomCountry = (e) => {
-    e.preventDefault();
-    if (customCountryInput.trim() && !importerCountries.includes(customCountryInput.trim())) {
-      setImporterCountries([...importerCountries, customCountryInput.trim()]);
-      setCustomCountryInput('');
-      setShowAddCountry(false);
-    }
-  };
 
   const handleRegisterSubmit = (e) => {
     e.preventDefault();
@@ -160,7 +134,7 @@ export default function Register({ onNavigate }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-700 flex flex-col relative select-none font-sans overflow-hidden">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-700 flex flex-col relative font-sans overflow-hidden">
       
       {/* Background Animated Gradient Overlay */}
       <div className="absolute inset-0 pointer-events-none z-0">
@@ -525,7 +499,7 @@ export default function Register({ onNavigate }) {
                 {/* Role Selection Horizontal Cards */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Select Account Role</label>
-                  <div className="grid grid-cols-3 gap-2.5">
+                  <div className="grid grid-cols-2 gap-2.5">
                     {/* Exporter Card */}
                     <div 
                       onClick={() => setRole('exporter')}
@@ -537,19 +511,6 @@ export default function Register({ onNavigate }) {
                     >
                       <Briefcase className={`w-5 h-5 ${role === 'exporter' ? 'text-sky-500' : 'text-slate-400'}`} />
                       <span className="text-xxs font-bold mt-1">Exporter</span>
-                    </div>
-
-                    {/* Importer Card */}
-                    <div 
-                      onClick={() => setRole('importer')}
-                      className={`relative p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col items-center justify-between text-center ${
-                        role === 'importer'
-                          ? 'border-sky-500 bg-sky-50/40 text-slate-900 scale-[1.02] shadow-sm'
-                          : 'border-slate-200 bg-white/60 text-slate-500 hover:border-slate-300'
-                      }`}
-                    >
-                      <ShoppingCart className={`w-5 h-5 ${role === 'importer' ? 'text-sky-500' : 'text-slate-400'}`} />
-                      <span className="text-xxs font-bold mt-1">Importer</span>
                     </div>
 
                     {/* Logistics Card */}
@@ -597,7 +558,7 @@ export default function Register({ onNavigate }) {
                 
                 <div>
                   <h2 className="text-lg font-bold text-slate-900 tracking-tight">Tell Us About Your Business</h2>
-                  <p className="text-xs text-slate-500 mt-1 font-medium">Step 2 of 3 · {role === 'exporter' ? 'Exporter Details' : role === 'importer' ? 'Importer Details' : 'Logistics Partner Details'}</p>
+                  <p className="text-xs text-slate-500 mt-1 font-medium">Step 2 of 3 · {role === 'exporter' ? 'Exporter Details' : 'Logistics Partner Details'}</p>
                 </div>
 
                 {/* RENDER EXPORTER DETAILS */}
@@ -702,123 +663,7 @@ export default function Register({ onNavigate }) {
                   </div>
                 )}
 
-                {/* RENDER IMPORTER DETAILS */}
-                {role === 'importer' && (
-                  <div className="space-y-5">
-                    {/* License No */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-555 uppercase tracking-widest">Business License Number</label>
-                      <input 
-                        type="text" 
-                        value={importerLicense}
-                        onChange={(e) => {
-                          setImporterLicense(e.target.value);
-                          if (errors.importerLicense) setErrors({ ...errors, importerLicense: null });
-                        }}
-                        placeholder="LIC-9876543-A" 
-                        className={`w-full px-4 py-2 bg-white border rounded-xl text-xs placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all duration-200 ${
-                          errors.importerLicense ? 'border-red-500/50' : 'border-slate-200'
-                        }`}
-                      />
-                      {errors.importerLicense && <p className="text-xs text-red-550 font-semibold">{errors.importerLicense}</p>}
-                    </div>
 
-                    {/* Industry Type */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Industry Classification</label>
-                      <div className="grid grid-cols-3 gap-2.5">
-                        {['Retail', 'Wholesale', 'Distribution'].map((ind) => (
-                          <button 
-                            key={ind}
-                            type="button" 
-                            onClick={() => setImporterIndustry(ind)}
-                            className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                              importerIndustry === ind 
-                                ? 'bg-sky-500 text-white border-sky-400 shadow-md shadow-sky-500/10 scale-102' 
-                                : 'bg-white border-slate-205 text-slate-655 hover:bg-slate-50'
-                            }`}
-                          >
-                            {ind}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Products Interested In */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Products Interested In</label>
-                      <div className="flex flex-wrap gap-2">
-                        {importerProducts.map((prod) => (
-                          <span key={prod} className="px-3 py-1 rounded-full text-xs font-bold bg-sky-55 border border-sky-200 text-sky-700 flex items-center gap-1.5 shadow-sm">
-                            <span>{prod}</span>
-                            <button type="button" onClick={() => setImporterProducts(importerProducts.filter(p => p !== prod))}>
-                              <X className="w-3 h-3 text-sky-500 hover:text-sky-700" />
-                            </button>
-                          </span>
-                        ))}
-
-                        {showAddProduct ? (
-                          <form onSubmit={handleAddCustomProduct} className="inline-flex items-center gap-2">
-                            <input 
-                              type="text"
-                              value={customProductInput}
-                              onChange={(e) => setCustomProductInput(e.target.value)}
-                              placeholder="Add product..."
-                              className="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs text-slate-800 focus:outline-none focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all"
-                              autoFocus
-                            />
-                            <button type="submit" className="text-xs font-bold text-sky-600">Add</button>
-                          </form>
-                        ) : (
-                          <button 
-                            type="button" 
-                            onClick={() => setShowAddProduct(true)}
-                            className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-slate-200 bg-white hover:border-slate-350 text-slate-550 flex items-center gap-1 cursor-pointer"
-                          >
-                            <Plus className="w-3.5 h-3.5" /> Add
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Supplier Countries */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Preferred Supplier Countries</label>
-                      <div className="flex flex-wrap gap-2">
-                        {importerCountries.map((c) => (
-                          <span key={c} className="px-3 py-1 rounded-full text-xs font-bold bg-sky-55 border border-sky-200 text-sky-700 flex items-center gap-1.5 shadow-sm">
-                            <span>{c}</span>
-                            <button type="button" onClick={() => setImporterCountries(importerCountries.filter(item => item !== c))}>
-                              <X className="w-3.5 h-3.5 text-sky-500 hover:text-sky-700" />
-                            </button>
-                          </span>
-                        ))}
-
-                        {showAddCountry ? (
-                          <form onSubmit={handleAddCustomCountry} className="inline-flex items-center gap-2">
-                            <input 
-                              type="text"
-                              value={customCountryInput}
-                              onChange={(e) => setCustomCountryInput(e.target.value)}
-                              placeholder="Add country..."
-                              className="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs text-slate-800 focus:outline-none focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all"
-                              autoFocus
-                            />
-                            <button type="submit" className="text-xs font-bold text-sky-600">Add</button>
-                          </form>
-                        ) : (
-                          <button 
-                            type="button" 
-                            onClick={() => setShowAddCountry(true)}
-                            className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-slate-200 bg-white hover:border-slate-350 text-slate-555 flex items-center gap-1 cursor-pointer"
-                          >
-                            <Plus className="w-3.5 h-3.5" /> Add
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {/* RENDER LOGISTICS DETAILS */}
                 {role === 'logistics' && (
@@ -954,7 +799,7 @@ export default function Register({ onNavigate }) {
                   
                   {/* Checkbox agreement */}
                   <div className="flex items-start">
-                    <label className="flex items-start gap-2.5 text-xs font-semibold text-slate-500 cursor-pointer select-none">
+                    <label className="flex items-start gap-2.5 text-xs font-semibold text-slate-500 cursor-pointer">
                       <input 
                         type="checkbox"
                         checked={agreed}

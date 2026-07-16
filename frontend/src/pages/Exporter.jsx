@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Globe, Bell, User as UserIcon, Settings, LogOut, Briefcase, ShoppingCart, 
   Truck, ArrowUpRight, Search, Plus, Trash2, Edit3, Eye, X, Check, AlertTriangle, 
-  ChevronDown, HelpCircle, Activity, TrendingUp, Sliders, DollarSign, Loader2
+  ChevronDown, HelpCircle, Activity, TrendingUp, Sliders, DollarSign, Loader2,
+  ArrowLeft, ArrowRight
 } from 'lucide-react';
 
 export default function Exporter({ onNavigate }) {
@@ -95,6 +96,51 @@ export default function Exporter({ onNavigate }) {
     });
   };
 
+  const [analysisSubView, setAnalysisSubView] = useState('select'); // 'select', 'recommendations', 'country-overview', 'compliance', 'cost', 'what-if'
+
+  // Cost Estimation Configuration States
+  const [costQuantity, setCostQuantity] = useState(1000);
+  const [costShippingMode, setCostShippingMode] = useState('Sea'); // 'Air', 'Sea', 'Road'
+  const [costInsurance, setCostInsurance] = useState(true);
+  const [costLogisticsPartner, setCostLogisticsPartner] = useState('FastCargo Logistics');
+  const [isCalculatingCost, setIsCalculatingCost] = useState(false);
+  const [calculatedCostBreakdown, setCalculatedCostBreakdown] = useState({
+    productCost: 350.00,
+    freight: 45.00,
+    insurance: 12.00,
+    tariff: 20.35,
+    gst: 18.00,
+    customsDuty: 20.35,
+    handlingCharges: 8.00,
+    landedCost: 473.70,
+    sellingPrice: 620.00,
+    revenue: 620000,
+    profit: 146.30,
+    margin: 23.6
+  });
+
+  // Compliance Chat Assistant States
+  const [complianceLang, setComplianceLang] = useState('EN'); // 'EN', 'HI', 'TE'
+  const [complianceChatText, setComplianceChatText] = useState('');
+  const [complianceChatHistory, setComplianceChatHistory] = useState([
+    { sender: 'assistant', text: "Hello! I am your TradeWise Compliance Assistant. Ask me anything about exporting goods to Germany under FSSAI and European Union regulations." }
+  ]);
+
+  // What-if Simulator States
+  const [whatIfOrganic, setWhatIfOrganic] = useState(true);
+  const [whatIfShippingMode, setWhatIfShippingMode] = useState('Sea');
+  const [whatIfInsuranceActive, setWhatIfInsuranceActive] = useState(true);
+  const [whatIfTariffAdj, setWhatIfTariffAdj] = useState(5);
+  const [whatIfLogisticsPartner, setWhatIfLogisticsPartner] = useState('FastCargo Logistics');
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulatedResults, setSimulatedResults] = useState({
+    aiScore: 84,
+    compliance: 72,
+    landedCost: 420,
+    profit: 160,
+    countryRank: 3
+  });
+
   const handleStartAnalysis = () => {
     if (!selectedAnalysisProduct) return;
     setIsAnalyzing(true);
@@ -102,8 +148,119 @@ export default function Exporter({ onNavigate }) {
     setTimeout(() => {
       setIsAnalyzing(false);
       setAnalyzedProduct(selectedAnalysisProduct);
+      setAnalysisSubView('recommendations');
       addToast(`AI analysis completed for ${selectedAnalysisProduct}!`, 'success');
     }, 1500);
+  };
+
+  const handleCalculateCost = () => {
+    setIsCalculatingCost(true);
+    setTimeout(() => {
+      setIsCalculatingCost(false);
+      const qty = parseFloat(costQuantity) || 1000;
+      const baseProductCost = selectedAnalysisProduct === 'Cumin Seeds' ? 420.00 : 350.00;
+      const freightPerKg = costShippingMode === 'Air' ? 120.00 : costShippingMode === 'Road' ? 25.00 : 45.00;
+      const insPerKg = costInsurance ? 12.00 : 0.00;
+      const tariffPerKg = baseProductCost * 0.05; // 5% tariff estimate
+      const gstPerKg = baseProductCost * 0.05; // 5% GST
+      const customsPerKg = baseProductCost * 0.05; // 5% customs
+      const handlingPerKg = 8.00;
+      
+      const landedPerKg = baseProductCost + freightPerKg + insPerKg + tariffPerKg + gstPerKg + customsPerKg + handlingPerKg;
+      const sellingPrice = selectedAnalysisProduct === 'Cumin Seeds' ? 700.00 : 620.00;
+      const profitPerKg = sellingPrice - landedPerKg;
+      const marginVal = (profitPerKg / sellingPrice) * 100;
+      
+      setCalculatedCostBreakdown({
+        productCost: baseProductCost,
+        freight: freightPerKg,
+        insurance: insPerKg,
+        tariff: tariffPerKg,
+        gst: gstPerKg,
+        customsDuty: customsPerKg,
+        handlingCharges: handlingPerKg,
+        landedCost: landedPerKg,
+        sellingPrice: sellingPrice,
+        revenue: sellingPrice * qty,
+        profit: profitPerKg,
+        margin: parseFloat(marginVal.toFixed(1))
+      });
+      addToast("Landed cost calculations updated successfully.", "success");
+    }, 1000);
+  };
+
+  const handleSendComplianceChat = () => {
+    if (!complianceChatText.trim()) return;
+    const userMsg = complianceChatText.trim();
+    setComplianceChatText('');
+    setComplianceChatHistory(prev => [...prev, { sender: 'user', text: userMsg }]);
+    
+    setTimeout(() => {
+      let reply = "";
+      const lower = userMsg.toLowerCase();
+      if (lower.includes("invoice") || lower.includes("document")) {
+        reply = `Under EU DGFT guidelines, your Commercial Invoice must declare the exact net weight, HS Code (${selectedAnalysisProduct === 'Cumin Seeds' ? '0909.31' : '0910.30'}), organic origin declaration, and FSSAI export registration number. Since your invoice is currently marked as verified, you are compliant with this factor.`;
+      } else if (lower.includes("organic") || lower.includes("certification")) {
+        reply = "Germany requires USDA/EU equivalent Organic Certification for organic labeling. Your profile lists this certificate as 'Missing'. You must submit NPOP India documentation to APEDA to resolve this gap.";
+      } else {
+        reply = `To export ${selectedAnalysisProduct} to ${selectedCountry}, ensure all required phytosanitary lab test reports are active. The complexity rating is currently at 78/100 because of the missing Organic Certificate and Export License.`;
+      }
+      setComplianceChatHistory(prev => [...prev, { sender: 'assistant', text: reply }]);
+    }, 800);
+  };
+
+  const handleRunSimulation = () => {
+    setIsSimulating(true);
+    setTimeout(() => {
+      setIsSimulating(false);
+      
+      let simScore = 84;
+      let simComp = 72;
+      let simLanded = 420;
+      let simProfit = 160;
+      let simRank = 3;
+      
+      if (whatIfOrganic) {
+        simScore += 4;
+        simComp += 18;
+      }
+      
+      if (whatIfShippingMode === 'Air') {
+        simLanded += 80;
+        simProfit -= 80;
+      } else if (whatIfShippingMode === 'Road') {
+        simLanded -= 20;
+        simProfit += 20;
+      }
+      
+      if (!whatIfInsuranceActive) {
+        simLanded -= 12;
+        simProfit += 12;
+        simScore -= 3;
+      }
+      
+      const tariffDiff = (parseFloat(whatIfTariffAdj) - 5) * 5;
+      simLanded += tariffDiff;
+      simProfit -= tariffDiff;
+      
+      if (simProfit > 180) {
+        simRank = 1;
+        simScore += 3;
+      } else if (simProfit > 150) {
+        simRank = 2;
+      } else {
+        simRank = 4;
+      }
+      
+      setSimulatedResults({
+        aiScore: simScore,
+        compliance: simComp,
+        landedCost: simLanded,
+        profit: simProfit,
+        countryRank: simRank
+      });
+      addToast("Counterfactual simulation completed! Displaying projections.", "success");
+    }, 1000);
   };
 
   // What-If Sliders State
@@ -252,7 +409,7 @@ export default function Exporter({ onNavigate }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-700 flex flex-col antialiased font-sans select-none relative">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-700 flex flex-col antialiased font-sans relative">
       
       {/* Toast Notification Stack */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
@@ -291,7 +448,7 @@ export default function Exporter({ onNavigate }) {
             onClick={() => setActiveView('overview')}
             className={`transition-colors h-full px-1 cursor-pointer relative ${activeView === 'overview' ? 'text-sky-655 font-extrabold' : 'hover:text-slate-950'}`}
           >
-            Overview
+            Workspace
             {activeView === 'overview' && <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-sky-500 rounded-t-full"></div>}
           </button>
 
@@ -304,10 +461,10 @@ export default function Exporter({ onNavigate }) {
           </button>
 
           <button 
-            onClick={() => setActiveView('analysis')}
+            onClick={() => { setActiveView('analysis'); setAnalysisSubView('select'); }}
             className={`transition-colors h-full px-1 cursor-pointer relative ${activeView === 'analysis' ? 'text-sky-655 font-extrabold' : 'hover:text-slate-950'}`}
           >
-            Analysis
+            Market Analysis
             {activeView === 'analysis' && <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-sky-500 rounded-t-full"></div>}
           </button>
 
@@ -315,7 +472,7 @@ export default function Exporter({ onNavigate }) {
             onClick={() => setActiveView('orders')}
             className={`transition-colors h-full px-1 cursor-pointer relative ${activeView === 'orders' ? 'text-sky-655 font-extrabold' : 'hover:text-slate-950'}`}
           >
-            Orders
+            Export Orders
             {activeView === 'orders' && <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-sky-500 rounded-t-full"></div>}
           </button>
 
@@ -487,7 +644,7 @@ export default function Exporter({ onNavigate }) {
 
               {/* Analyses Card */}
               <div 
-                onClick={() => setActiveView('analysis')}
+                onClick={() => { setActiveView('analysis'); setAnalysisSubView('select'); }}
                 className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-emerald-250 cursor-pointer transition-all duration-300 relative group overflow-hidden"
               >
                 <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
@@ -563,7 +720,7 @@ export default function Exporter({ onNavigate }) {
                   </button>
 
                   <button 
-                    onClick={() => setActiveView('analysis')}
+                    onClick={() => { setActiveView('analysis'); setAnalysisSubView('select'); }}
                     className="w-full text-left flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 cursor-pointer transition-all group"
                   >
                     <div className="flex items-center gap-3">
@@ -808,6 +965,7 @@ export default function Exporter({ onNavigate }) {
                                 onClick={() => {
                                   setSelectedAnalysisProduct(p.name);
                                   setActiveView('analysis');
+                                  setAnalysisSubView('select');
                                   addToast(`Loading market index details for ${p.name}...`, 'success');
                                 }}
                                 className="p-1.5 text-slate-400 hover:text-sky-600 rounded-lg hover:bg-slate-50 cursor-pointer"
@@ -1018,655 +1176,1042 @@ export default function Exporter({ onNavigate }) {
         {/* ---------------------------------------------------- */}
         {activeView === 'analysis' && (
           <div className="space-y-6 animate-in fade-in duration-300">
-            <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Market Analysis</h1>
-              <p className="text-xs text-slate-500 mt-1 font-medium">AI-powered export recommendations for your products</p>
+            {/* Header section with back button if not in select step */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight">Market Analysis</h1>
+                <p className="text-xs text-slate-500 mt-1 font-medium">
+                  {analysisSubView === 'select' && "AI-powered export recommendations for your products"}
+                  {analysisSubView === 'recommendations' && `Global recommendations for ${selectedAnalysisProduct}`}
+                  {analysisSubView === 'country-overview' && `${selectedCountry} Recommendation Hub`}
+                  {analysisSubView === 'compliance' && `${selectedCountry} Compliance Report`}
+                  {analysisSubView === 'cost' && `${selectedCountry} Cost & Profit Estimation`}
+                  {analysisSubView === 'what-if' && `${selectedCountry} Counterfactual Simulator`}
+                </p>
+              </div>
+
+              {analysisSubView !== 'select' && (
+                <button
+                  onClick={() => {
+                    if (analysisSubView === 'recommendations') setAnalysisSubView('select');
+                    else if (analysisSubView === 'country-overview') setAnalysisSubView('recommendations');
+                    else setAnalysisSubView('country-overview');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-xl transition-all cursor-pointer shadow-sm hover:shadow"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>
+                    {analysisSubView === 'recommendations' && "Back to Analyze"}
+                    {analysisSubView === 'country-overview' && "Back to Recommendations"}
+                    {(analysisSubView === 'compliance' || analysisSubView === 'cost' || analysisSubView === 'what-if') && "Back to Overview"}
+                  </span>
+                </button>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              
-              {/* Left Panel: Recommendations Selection (4 Cols) */}
-              <div className="lg:col-span-4 bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
-                
-                {/* Select Product Dropdown & Start button */}
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-widest">Select Product</label>
-                    <select 
-                      value={selectedAnalysisProduct}
-                      onChange={(e) => {
-                        setSelectedAnalysisProduct(e.target.value);
-                        setAnalyzedProduct(null); // Clear analysis when product changes
-                      }}
-                      className="w-full px-3.5 py-2.5 border border-slate-200 bg-white rounded-xl text-xs font-semibold focus:outline-none focus:border-sky-500 cursor-pointer"
+            {/* SUB-VIEW: SELECT PRODUCT (Analyze Product) */}
+            {analysisSubView === 'select' && (
+              <div className="max-w-xl mx-auto py-8">
+                {isAnalyzing ? (
+                  <div className="bg-white border border-slate-200/85 rounded-2xl p-12 text-center shadow-lg flex flex-col items-center justify-center min-h-[350px] animate-in fade-in duration-300">
+                    <div className="w-16 h-16 rounded-full bg-sky-50 flex items-center justify-center mb-6">
+                      <Loader2 className="w-8 h-8 text-sky-500 animate-spin" />
+                    </div>
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Running AI Matching Algorithms</h3>
+                    <p className="text-xxs text-slate-450 mt-2 max-w-xs leading-relaxed">
+                      Evaluating tariff indices, phytosanitary requirements, shipping freight costs, and country credit risks for <strong>{selectedAnalysisProduct}</strong>...
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6 animate-in fade-in duration-300">
+                    <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                      <div className="p-3 rounded-xl bg-sky-50 text-sky-500">
+                        <Globe className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Select Product to Analyze</h3>
+                        <p className="text-[10px] text-slate-400 font-medium">Access compliance complexity ratings and landed cost estimates</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Choose Catalog Product</label>
+                        <select 
+                          value={selectedAnalysisProduct}
+                          onChange={(e) => {
+                            setSelectedAnalysisProduct(e.target.value);
+                            setAnalyzedProduct(null);
+                          }}
+                          className="w-full px-4 py-3 border border-slate-200 bg-white rounded-xl text-xs font-semibold focus:outline-none focus:border-sky-500 cursor-pointer"
+                        >
+                          {products.map(p => (
+                            <option key={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <button
+                        onClick={handleStartAnalysis}
+                        className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 font-bold text-xs text-white bg-sky-500 hover:bg-sky-400 shadow-md shadow-sky-500/10 rounded-xl transition-all cursor-pointer"
+                      >
+                        <span>Start Market Analysis</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* SUB-VIEW: RECOMMENDATIONS TABLE */}
+            {analysisSubView === 'recommendations' && (
+              <div className="space-y-5 animate-in fade-in duration-300">
+                <div className="bg-sky-50/50 border border-sky-100 rounded-2xl p-4 flex items-center justify-between text-xs font-bold text-sky-700">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>AI-derived export suggestions matching <strong>{selectedAnalysisProduct}</strong> parameters:</span>
+                  </div>
+                  <span className="bg-sky-100 text-sky-800 px-2.5 py-0.5 rounded-full text-[10px]">3 Target Markets</span>
+                </div>
+
+                <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] font-black text-slate-450 uppercase tracking-widest">
+                          <th className="py-4 px-5">Country</th>
+                          <th className="py-4 px-5">AI score</th>
+                          <th className="py-4 px-5">Market Demand</th>
+                          <th className="py-4 px-5">Estimated Profit</th>
+                          <th className="py-4 px-5 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
+                        {/* Germany */}
+                        <tr className="hover:bg-slate-50/40 transition-colors">
+                          <td className="py-4 px-5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xl">🇩🇪</span>
+                              <span className="font-bold text-slate-800">Germany</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-5">
+                            <span className="text-sky-655 font-extrabold text-sm">84.6%</span>
+                          </td>
+                          <td className="py-4 px-5">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                              High ↑
+                            </span>
+                          </td>
+                          <td className="py-4 px-5 text-slate-800 font-bold">₹184.65/kg</td>
+                          <td className="py-4 px-5 text-right">
+                            <button
+                              onClick={() => { setSelectedCountry('Germany'); setAnalysisSubView('country-overview'); }}
+                              className="px-3.5 py-1.5 text-[10px] font-bold text-white bg-sky-500 hover:bg-sky-400 rounded-lg shadow transition-all cursor-pointer"
+                            >
+                              View Details
+                            </button>
+                          </td>
+                        </tr>
+
+                        {/* UAE */}
+                        <tr className="hover:bg-slate-50/40 transition-colors">
+                          <td className="py-4 px-5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xl">🇦🇪</span>
+                              <span className="font-bold text-slate-800">UAE</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-5">
+                            <span className="text-sky-655 font-extrabold text-sm">76.2%</span>
+                          </td>
+                          <td className="py-4 px-5">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                              Medium
+                            </span>
+                          </td>
+                          <td className="py-4 px-5 text-slate-800 font-bold">₹145.00/kg</td>
+                          <td className="py-4 px-5 text-right">
+                            <button
+                              onClick={() => { setSelectedCountry('UAE'); setAnalysisSubView('country-overview'); }}
+                              className="px-3.5 py-1.5 text-[10px] font-bold text-white bg-sky-500 hover:bg-sky-400 rounded-lg shadow transition-all cursor-pointer"
+                            >
+                              View Details
+                            </button>
+                          </td>
+                        </tr>
+
+                        {/* Singapore */}
+                        <tr className="hover:bg-slate-50/40 transition-colors">
+                          <td className="py-4 px-5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xl">🇸🇬</span>
+                              <span className="font-bold text-slate-800">Singapore</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-5">
+                            <span className="text-sky-655 font-extrabold text-sm">71.8%</span>
+                          </td>
+                          <td className="py-4 px-5">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                              Growing
+                            </span>
+                          </td>
+                          <td className="py-4 px-5 text-slate-800 font-bold">₹120.00/kg</td>
+                          <td className="py-4 px-5 text-right">
+                            <button
+                              onClick={() => { setSelectedCountry('Singapore'); setAnalysisSubView('country-overview'); }}
+                              className="px-3.5 py-1.5 text-[10px] font-bold text-white bg-sky-500 hover:bg-sky-400 rounded-lg shadow transition-all cursor-pointer"
+                            >
+                              View Details
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-VIEW: COUNTRY OVERVIEW PAGE */}
+            {analysisSubView === 'country-overview' && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                {/* Header overview banner */}
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <span className="text-4xl">{selectedCountry === 'Germany' ? '🇩🇪' : selectedCountry === 'UAE' ? '🇦🇪' : '🇸🇬'}</span>
+                    <div>
+                      <h2 className="text-xl font-black text-slate-900 tracking-tight">{selectedCountry} Market Summary</h2>
+                      <p className="text-xxs text-slate-400 font-bold uppercase tracking-wider mt-0.5">Route evaluation for {selectedAnalysisProduct}</p>
+                    </div>
+                  </div>
+                  <span className="text-xxs font-black tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 uppercase">
+                    ★ AI Recommended
+                  </span>
+                </div>
+
+                {/* Country Overview Cards Grid */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Card 1: AI Score */}
+                  <div className="bg-white border border-slate-200/80 p-4.5 rounded-2xl shadow-sm text-center space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">AI Score</span>
+                    <span className="text-xl font-black text-sky-650 block">
+                      {selectedCountry === 'Germany' ? '84.6' : selectedCountry === 'UAE' ? '76.2' : '71.8'}/100
+                    </span>
+                    <span className="text-[9px] text-sky-500 font-bold block">Highly feasible match</span>
+                  </div>
+
+                  {/* Card 2: Demand */}
+                  <div className="bg-white border border-slate-200/80 p-4.5 rounded-2xl shadow-sm text-center space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Market Demand</span>
+                    <span className="text-xl font-black text-emerald-600 block">
+                      {selectedCountry === 'Germany' ? 'HIGH' : selectedCountry === 'UAE' ? 'MEDIUM' : 'GROWING'}
+                    </span>
+                    <span className="text-[9px] text-emerald-500 font-bold block">↑ Consistent YoY gains</span>
+                  </div>
+
+                  {/* Card 3: Expected Profit */}
+                  <div className="bg-white border border-slate-200/80 p-4.5 rounded-2xl shadow-sm text-center space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Expected Profit</span>
+                    <span className="text-xl font-black text-slate-800 block">
+                      {selectedCountry === 'Germany' ? '₹184.65/kg' : selectedCountry === 'UAE' ? '₹145.00/kg' : '₹120.00/kg'}
+                    </span>
+                    <span className="text-[9px] text-slate-400 font-bold block">Selling price: {selectedCountry === 'Germany' ? '₹620/kg' : selectedCountry === 'UAE' ? '₹580/kg' : '₹520/kg'}</span>
+                  </div>
+
+                  {/* Card 4: Compliance Score */}
+                  <div className="bg-white border border-slate-200/80 p-4.5 rounded-2xl shadow-sm text-center space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Compliance index</span>
+                    <span className="text-xl font-black text-amber-600 block">
+                      {selectedCountry === 'Germany' ? '78/100' : selectedCountry === 'UAE' ? '88/100' : '82/100'}
+                    </span>
+                    <span className="text-[9px] text-amber-500 font-bold block">Requires certificate updates</span>
+                  </div>
+                </div>
+
+                {/* Card navigation buttons (Workflow action cards) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Action 1: Compliance */}
+                  <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm hover:shadow transition-all space-y-3.5 flex flex-col justify-between">
+                    <div className="space-y-1">
+                      <span className="text-xs font-black text-slate-850 uppercase tracking-wider block">Compliance Report</span>
+                      <p className="text-[10px] text-slate-400 font-medium">Verify customs documents, certifications status, labeling rules, and index parameters.</p>
+                    </div>
+                    <button
+                      onClick={() => setAnalysisSubView('compliance')}
+                      className="w-full py-2.5 text-xs font-bold text-sky-655 bg-sky-50 hover:bg-sky-100 rounded-xl transition-all cursor-pointer text-center"
                     >
-                      {products.map(p => (
-                        <option key={p.id}>{p.name}</option>
+                      View Compliance Report
+                    </button>
+                  </div>
+
+                  {/* Action 2: Cost Estimation */}
+                  <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm hover:shadow transition-all space-y-3.5 flex flex-col justify-between">
+                    <div className="space-y-1">
+                      <span className="text-xs font-black text-slate-850 uppercase tracking-wider block">Cost & Profit Estimation</span>
+                      <p className="text-[10px] text-slate-400 font-medium">Calculate product cost, transport freight, insurance, taxes, and net landed cost margins.</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setCostQuantity(1000);
+                        setCostShippingMode('Sea');
+                        setCostInsurance(true);
+                        setCostLogisticsPartner('FastCargo Logistics');
+                        setAnalysisSubView('cost');
+                      }}
+                      className="w-full py-2.5 text-xs font-bold text-sky-655 bg-sky-50 hover:bg-sky-100 rounded-xl transition-all cursor-pointer text-center"
+                    >
+                      View Cost Estimation
+                    </button>
+                  </div>
+
+                  {/* Action 3: What-if Simulation */}
+                  <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm hover:shadow transition-all space-y-3.5 flex flex-col justify-between">
+                    <div className="space-y-1">
+                      <span className="text-xs font-black text-slate-850 uppercase tracking-wider block">What-if Simulator</span>
+                      <p className="text-[10px] text-slate-400 font-medium">Run simulations on shipping transport modes, tariff rates, insurance, and organic branding.</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setWhatIfOrganic(true);
+                        setWhatIfShippingMode('Sea');
+                        setWhatIfInsuranceActive(true);
+                        setWhatIfTariffAdj(5);
+                        setWhatIfLogisticsPartner('FastCargo Logistics');
+                        setSimulatedResults({
+                          aiScore: selectedCountry === 'Germany' ? 84 : selectedCountry === 'UAE' ? 76 : 71,
+                          compliance: selectedCountry === 'Germany' ? 72 : selectedCountry === 'UAE' ? 82 : 78,
+                          landedCost: selectedCountry === 'Germany' ? 420 : selectedCountry === 'UAE' ? 390 : 410,
+                          profit: selectedCountry === 'Germany' ? 160 : selectedCountry === 'UAE' ? 140 : 110,
+                          countryRank: selectedCountry === 'Germany' ? 3 : selectedCountry === 'UAE' ? 5 : 7
+                        });
+                        setAnalysisSubView('what-if');
+                      }}
+                      className="w-full py-2.5 text-xs font-bold text-sky-655 bg-sky-50 hover:bg-sky-100 rounded-xl transition-all cursor-pointer text-center"
+                    >
+                      Run What-if Analysis
+                    </button>
+                  </div>
+
+                  {/* Action 4: Create Order */}
+                  <div className="bg-gradient-to-br from-sky-500/5 to-indigo-500/5 border border-indigo-100 p-5 rounded-2xl shadow-sm hover:shadow transition-all space-y-3.5 flex flex-col justify-between">
+                    <div className="space-y-1">
+                      <span className="text-xs font-black text-slate-850 uppercase tracking-wider block">Commit & Export</span>
+                      <p className="text-[10px] text-slate-400 font-medium">Create a provisional Indian SME export order and lock this trade route in your tracking log.</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const orderId = `ORD-00${orders.length + 1}`;
+                        const newOrder = {
+                          id: orderId,
+                          importer: selectedCountry === 'Germany' ? "EuroSpice GmbH" : selectedCountry === 'UAE' ? "Al Noor Trading" : "SingaFoods",
+                          country: selectedCountry,
+                          email: selectedCountry === 'Germany' ? "info@eurospice.de" : selectedCountry === 'UAE' ? "alnoor@trading.ae" : "buying@singafoods.sg",
+                          phone: selectedCountry === 'Germany' ? "+49-89-987654" : selectedCountry === 'UAE' ? "+971-50-1234567" : "+65-6789-0123",
+                          product: selectedAnalysisProduct,
+                          hscode: selectedAnalysisProduct === 'Cumin Seeds' ? "0909.31" : "0910.30",
+                          qty: "1,000 kg",
+                          value: selectedCountry === 'Germany' ? "₹6,20,000" : selectedCountry === 'UAE' ? "₹5,80,000" : "₹5,20,000",
+                          status: "Pending",
+                          date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }),
+                          delivery: "25 August 2026",
+                          logisticsPartner: "TBD"
+                        };
+                        setOrders(prev => [newOrder, ...prev]);
+                        addToast(`Export Order ${orderId} created successfully for ${selectedCountry}!`, "success");
+                        setActiveView('orders');
+                      }}
+                      className="w-full py-2.5 text-xs font-bold text-white bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 rounded-xl shadow-md transition-all cursor-pointer text-center"
+                    >
+                      Create Export Order
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-VIEW: COMPLIANCE REPORT PAGE */}
+            {analysisSubView === 'compliance' && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-in fade-in duration-300">
+                
+                {/* Left Panel: Checklist and Score (7 Cols) */}
+                <div className="lg:col-span-7 space-y-6">
+                  {/* Documents & Certifications Card */}
+                  <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm space-y-4">
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                      <h3 className="text-xs font-black text-slate-850 uppercase tracking-widest">Required Documents & Status</h3>
+                      {/* Language Select controls */}
+                      <div className="flex bg-slate-50 border border-slate-200 rounded-lg p-0.5 text-[9px] font-black text-slate-500">
+                        {['EN', 'HI', 'TE'].map(lang => (
+                          <button
+                            key={lang}
+                            type="button"
+                            onClick={() => {
+                              setComplianceLang(lang);
+                              addToast(`Compliance documents translated to ${lang === 'EN' ? 'English' : lang === 'HI' ? 'Hindi' : 'Telugu'}.`, 'success');
+                            }}
+                            className={`px-2 py-0.5 rounded cursor-pointer ${complianceLang === lang ? 'bg-white text-sky-600 shadow-xs' : 'hover:text-slate-800'}`}
+                          >
+                            {lang}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Invoice */}
+                      <div 
+                        onClick={() => toggleDoc('invoice')}
+                        className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer select-none transition-all ${
+                          ownedDocs.invoice 
+                            ? 'border-emerald-250 bg-emerald-50/10 text-slate-800 shadow-xs' 
+                            : 'border-slate-100 hover:border-slate-200 bg-slate-50/30 text-slate-450'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 text-xs font-bold">
+                          <span className={ownedDocs.invoice ? "text-emerald-500" : "text-red-500 font-bold"}>{ownedDocs.invoice ? "✔" : "✖"}</span>
+                          <span>Commercial Invoice</span>
+                        </div>
+                        <span className={`text-[8px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full ${
+                          ownedDocs.invoice ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                        }`}>
+                          {ownedDocs.invoice ? 'Verified' : 'Missing'}
+                        </span>
+                      </div>
+
+                      {/* Packing List */}
+                      <div 
+                        onClick={() => toggleDoc('packingList')}
+                        className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer select-none transition-all ${
+                          ownedDocs.packingList 
+                            ? 'border-emerald-250 bg-emerald-50/10 text-slate-800 shadow-xs' 
+                            : 'border-slate-100 hover:border-slate-200 bg-slate-50/30 text-slate-455'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 text-xs font-bold">
+                          <span className={ownedDocs.packingList ? "text-emerald-500" : "text-red-500 font-bold"}>{ownedDocs.packingList ? "✔" : "✖"}</span>
+                          <span>Packing List</span>
+                        </div>
+                        <span className={`text-[8px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full ${
+                          ownedDocs.packingList ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                        }`}>
+                          {ownedDocs.packingList ? 'Verified' : 'Missing'}
+                        </span>
+                      </div>
+
+                      {/* Origin Cert */}
+                      <div 
+                        onClick={() => toggleDoc('originCert')}
+                        className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer select-none transition-all ${
+                          ownedDocs.originCert 
+                            ? 'border-emerald-255 bg-emerald-50/10 text-slate-800 shadow-xs' 
+                            : 'border-slate-100 hover:border-slate-200 bg-slate-50/30 text-slate-455'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 text-xs font-bold">
+                          <span className={ownedDocs.originCert ? "text-emerald-500" : "text-red-500 font-bold"}>{ownedDocs.originCert ? "✔" : "✖"}</span>
+                          <span>Certificate of Origin</span>
+                        </div>
+                        <span className={`text-[8px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full ${
+                          ownedDocs.originCert ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                        }`}>
+                          {ownedDocs.originCert ? 'Verified' : 'Missing'}
+                        </span>
+                      </div>
+
+                      {/* Export License */}
+                      <div 
+                        onClick={() => toggleDoc('fssaiLicense')}
+                        className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer select-none transition-all ${
+                          ownedDocs.fssaiLicense 
+                            ? 'border-emerald-255 bg-emerald-50/10 text-slate-800 shadow-xs' 
+                            : 'border-slate-100 hover:border-slate-200 bg-slate-50/30 text-slate-455'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 text-xs font-bold">
+                          <span className={ownedDocs.fssaiLicense ? "text-emerald-500" : "text-red-500 font-bold"}>{ownedDocs.fssaiLicense ? "✔" : "✖"}</span>
+                          <span>Export License</span>
+                        </div>
+                        <span className={`text-[8px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full ${
+                          ownedDocs.fssaiLicense ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                        }`}>
+                          {ownedDocs.fssaiLicense ? 'Verified' : 'Missing'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 text-right">
+                      <button
+                        onClick={() => addToast("Provisional compliance sample templates PDF package downloaded.", "success")}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-55 cursor-pointer shadow-xs"
+                      >
+                        <svg className="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Download Sample
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Certifications & Labeling Details Card */}
+                  <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm space-y-4">
+                    <h3 className="text-xs font-black text-slate-855 uppercase tracking-widest border-b border-slate-100 pb-2">Required Certifications</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Organic */}
+                      <div className="p-3.5 border border-slate-100 rounded-xl bg-slate-50/10 space-y-1">
+                        <span className="text-[10px] font-bold text-slate-450 uppercase tracking-wider block">Organic Certificate</span>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <div className={`w-1.5 h-1.5 rounded-full ${ownedDocs.organicCert ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                          <span className={`text-xs font-black ${ownedDocs.organicCert ? 'text-emerald-600' : 'text-red-550'}`}>
+                            {ownedDocs.organicCert ? 'Available' : 'Missing'}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOwnedDocs(prev => ({ ...prev, organicCert: !prev.organicCert }));
+                            addToast("Organic Certificate state toggled.", "success");
+                          }}
+                          className="text-[9px] font-bold text-sky-600 hover:underline mt-1 block cursor-pointer"
+                        >
+                          Toggle status
+                        </button>
+                      </div>
+
+                      {/* ISO 22000 */}
+                      <div className="p-3.5 border border-slate-100 rounded-xl bg-slate-50/10 space-y-1">
+                        <span className="text-[10px] font-bold text-slate-450 uppercase tracking-wider block">ISO 22000 Cert</span>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                          <span className="text-xs font-black text-emerald-600">Available</span>
+                        </div>
+                        <span className="text-[9px] text-slate-400 font-semibold block mt-1">Declared in profile settings</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-100 space-y-3">
+                      <h4 className="text-[10px] font-black text-slate-450 uppercase tracking-wider">Labeling & Packing Standards</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-semibold text-slate-705">
+                        <div className="p-3 bg-slate-50/30 rounded-xl border border-slate-100 space-y-1">
+                          <span className="block text-[9px] font-bold text-slate-450 uppercase">Language</span>
+                          <span>German translations</span>
+                        </div>
+                        <div className="p-3 bg-slate-50/30 rounded-xl border border-slate-100 space-y-1">
+                          <span className="block text-[9px] font-bold text-slate-450 uppercase">Packaging</span>
+                          <span>Double-wall vacuum seals</span>
+                        </div>
+                        <div className="p-3 bg-slate-50/30 rounded-xl border border-slate-100 space-y-1">
+                          <span className="block text-[9px] font-bold text-slate-450 uppercase">Shelf Life</span>
+                          <span>12 Months Dec declaration</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Panel: Complexity index & Sources & AI chat assistant (5 Cols) */}
+                <div className="lg:col-span-5 space-y-6">
+                  {/* Complexity Index Index */}
+                  {(() => {
+                    const ownedCount = Object.values(ownedDocs).filter(Boolean).length;
+                    const compScore = Math.max(100 - (ownedCount * 12), 10);
+                    const barColor = compScore < 40 ? 'bg-emerald-500' : compScore < 75 ? 'bg-amber-500' : 'bg-red-500';
+                    const textColor = compScore < 40 ? 'text-emerald-600' : compScore < 75 ? 'text-amber-600' : 'text-red-550';
+                    return (
+                      <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm space-y-3.5">
+                        <div className="flex justify-between items-center text-xs font-bold">
+                          <span className="text-slate-450 uppercase tracking-widest text-[10px]">Compliance Complexity</span>
+                          <span className={`font-black text-sm ${textColor}`}>{compScore} /100</span>
+                        </div>
+                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div className={`h-full ${barColor} rounded-full transition-all duration-300`} style={{ width: `${compScore}%` }}></div>
+                        </div>
+
+                        {/* Breakdown bars */}
+                        <div className="space-y-2 pt-2 text-[10px] font-bold text-slate-500">
+                          <div className="space-y-1">
+                            <div className="flex justify-between"><span>Verified Documents</span><span>{ownedDocs.invoice && ownedDocs.packingList ? '100%' : '50%'}</span></div>
+                            <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-sky-500 rounded-full" style={{ width: ownedDocs.invoice && ownedDocs.packingList ? '100%' : '50%' }}></div>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex justify-between"><span>Certifications</span><span>{ownedDocs.organicCert ? '100%' : '50%'}</span></div>
+                            <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-sky-500 rounded-full" style={{ width: ownedDocs.organicCert ? '100%' : '50%' }}></div>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex justify-between"><span>Lab Inspection Tests</span><span>90%</span></div>
+                            <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-sky-500 rounded-full" style={{ width: '90%' }}></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* References / Sources */}
+                        <div className="border-t border-slate-100 pt-3 space-y-1.5">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Official Sources</span>
+                          <div className="space-y-1 text-[10px] font-bold text-sky-655">
+                            <span className="block hover:underline cursor-pointer">↳ EU Spice Tariff Import Regulation (2026/410)</span>
+                            <span className="block hover:underline cursor-pointer">↳ Indian DGFT Phytosanitary Export Notification #42</span>
+                            <span className="block hover:underline cursor-pointer">↳ FSSAI organic packaging guidelines</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* AI Compliance chat box */}
+                  <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-xl flex flex-col justify-between min-h-[300px] border border-slate-800">
+                    <div className="space-y-3 flex-grow">
+                      <div className="flex items-center gap-2 border-b border-slate-800 pb-2.5">
+                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                        <span className="text-xxs font-black uppercase tracking-widest text-slate-350">AI TradeWise Assistant</span>
+                      </div>
+
+                      {/* Chat messages */}
+                      <div className="space-y-2.5 max-h-48 overflow-y-auto no-scrollbar py-1">
+                        {complianceChatHistory.map((m, idx) => (
+                          <div key={idx} className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}>
+                            <div className={`p-3 rounded-xl text-xxs font-semibold max-w-[85%] leading-relaxed ${
+                              m.sender === 'user' ? 'bg-sky-500 text-white' : 'bg-slate-800 text-slate-200'
+                            }`}>
+                              {m.text}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 border-t border-slate-800 pt-3 mt-3">
+                      <input 
+                        type="text" 
+                        value={complianceChatText}
+                        onChange={(e) => setComplianceChatText(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSendComplianceChat()}
+                        placeholder="Ask about compliance..."
+                        className="flex-grow bg-slate-800 border border-slate-700/60 rounded-xl px-3 py-2 text-xxs font-bold text-white focus:outline-none focus:border-sky-500"
+                      />
+                      <button 
+                        onClick={handleSendComplianceChat}
+                        className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-xxs font-black rounded-xl transition-all cursor-pointer"
+                      >
+                        Send
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-VIEW: COST & PROFIT ESTIMATION PAGE */}
+            {analysisSubView === 'cost' && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                {/* Cost Configurator top bar */}
+                <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm space-y-4">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Cost Calculation Parameters</span>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5 items-end">
+                    
+                    {/* Quantity */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-450 uppercase tracking-wider block">Quantity (kg)</label>
+                      <input 
+                        type="number"
+                        value={costQuantity}
+                        onChange={(e) => setCostQuantity(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+
+                    {/* Shipping Mode */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-450 uppercase tracking-wider block">Shipping Mode</label>
+                      <select 
+                        value={costShippingMode}
+                        onChange={(e) => setCostShippingMode(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold focus:outline-none focus:border-sky-500 cursor-pointer"
+                      >
+                        <option>Air</option>
+                        <option>Sea</option>
+                        <option>Road</option>
+                      </select>
+                    </div>
+
+                    {/* Insurance check */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-455 uppercase tracking-wider block">Insurance</label>
+                      <select 
+                        value={costInsurance ? 'Yes' : 'No'}
+                        onChange={(e) => setCostInsurance(e.target.value === 'Yes')}
+                        className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold focus:outline-none focus:border-sky-500 cursor-pointer"
+                      >
+                        <option>Yes</option>
+                        <option>No</option>
+                      </select>
+                    </div>
+
+                    {/* Logistics Partner */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-450 uppercase tracking-wider block">Logistics Partner</label>
+                      <select 
+                        value={costLogisticsPartner}
+                        onChange={(e) => setCostLogisticsPartner(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs font-semibold focus:outline-none focus:border-sky-500 cursor-pointer"
+                      >
+                        <option>FastCargo Logistics</option>
+                        <option>GlobalShip Inc.</option>
+                        <option>TransWorld Logistics</option>
+                      </select>
+                    </div>
+
+                    {/* Calculate trigger */}
+                    <button
+                      onClick={handleCalculateCost}
+                      disabled={isCalculatingCost}
+                      className="w-full py-2.5 text-xs font-bold text-white bg-sky-500 hover:bg-sky-400 disabled:opacity-50 rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      {isCalculatingCost ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Calculating...</span>
+                        </>
+                      ) : (
+                        <span>Calculate</span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {isCalculatingCost ? (
+                  <div className="bg-white border border-slate-200/80 p-12 text-center rounded-2xl flex flex-col items-center justify-center min-h-[300px]">
+                    <Loader2 className="w-8 h-8 text-sky-500 animate-spin mb-4" />
+                    <span className="text-xs font-black uppercase text-slate-800 tracking-wider">Evaluating Landed Tariff Margins</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    
+                    {/* Left: breakdown table (7 cols) */}
+                    <div className="lg:col-span-7 bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm space-y-4">
+                      <h3 className="text-xs font-black text-slate-850 uppercase tracking-widest border-b border-slate-100 pb-2">Landed Cost breakdown</h3>
+                      
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs font-semibold text-slate-655 border-collapse">
+                          <tbody className="divide-y divide-slate-50">
+                            <tr>
+                              <td className="py-2.5">Product Base Cost</td>
+                              <td className="py-2.5 text-right text-slate-800 font-bold">₹{(calculatedCostBreakdown.productCost).toFixed(2)}/kg</td>
+                            </tr>
+                            <tr>
+                              <td className="py-2.5">Freight Shipping Cost ({costShippingMode})</td>
+                              <td className="py-2.5 text-right text-slate-800 font-bold">₹{calculatedCostBreakdown.freight.toFixed(2)}/kg</td>
+                            </tr>
+                            <tr>
+                              <td className="py-2.5">Insurance Fees</td>
+                              <td className="py-2.5 text-right text-slate-800 font-bold">₹{calculatedCostBreakdown.insurance.toFixed(2)}/kg</td>
+                            </tr>
+                            <tr>
+                              <td className="py-2.5">Customs Duties (5%)</td>
+                              <td className="py-2.5 text-right text-slate-800 font-bold">₹{calculatedCostBreakdown.customsDuty.toFixed(2)}/kg</td>
+                            </tr>
+                            <tr>
+                              <td className="py-2.5">Tariff Regulatory Fee</td>
+                              <td className="py-2.5 text-right text-slate-800 font-bold">₹{calculatedCostBreakdown.tariff.toFixed(2)}/kg</td>
+                            </tr>
+                            <tr>
+                              <td className="py-2.5">GST (IGST equivalent)</td>
+                              <td className="py-2.5 text-right text-slate-800 font-bold">₹{calculatedCostBreakdown.gst.toFixed(2)}/kg</td>
+                            </tr>
+                            <tr>
+                              <td className="py-2.5">Handling & Clearing Charges</td>
+                              <td className="py-2.5 text-right text-slate-800 font-bold">₹{calculatedCostBreakdown.handlingCharges.toFixed(2)}/kg</td>
+                            </tr>
+                            <tr className="border-t border-slate-200 bg-sky-50/15 font-black text-sky-700">
+                              <td className="py-3 px-1.5">Total Landed Cost</td>
+                              <td className="py-3 px-1.5 text-right text-sky-750 text-sm">₹{calculatedCostBreakdown.landedCost.toFixed(2)}/kg</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Right: Profit margins and Visual charts (5 cols) */}
+                    <div className="lg:col-span-5 space-y-6">
+                      {/* Profit margins card */}
+                      <div className="bg-gradient-to-br from-indigo-500/5 to-sky-500/5 border border-indigo-100 p-5 rounded-2xl shadow-sm space-y-3.5">
+                        <span className="text-[10px] font-black text-slate-455 uppercase tracking-widest block border-b border-slate-200/50 pb-1.5">Margin Projections</span>
+                        
+                        <div className="space-y-2.5 text-xs font-bold text-slate-600">
+                          <div className="flex justify-between">
+                            <span>Target Selling Price</span>
+                            <span className="text-slate-900">₹{calculatedCostBreakdown.sellingPrice.toFixed(2)}/kg</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Projected Revenue</span>
+                            <span className="text-slate-900">₹{calculatedCostBreakdown.revenue.toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Landed Cost Total</span>
+                            <span className="text-slate-900">₹{(calculatedCostBreakdown.landedCost * costQuantity).toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="border-t border-slate-200/50 pt-2 flex justify-between font-black">
+                            <span className="text-emerald-700 text-[13px]">Net Profit Margin</span>
+                            <span className="text-emerald-600 text-[13px]">{calculatedCostBreakdown.margin}%</span>
+                          </div>
+                          <div className="flex justify-between font-black">
+                            <span className="text-emerald-700">Expected Profit</span>
+                            <span className="text-emerald-600">₹{(calculatedCostBreakdown.profit * costQuantity).toLocaleString('en-IN')}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* CSS Visual charts */}
+                      <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm space-y-4">
+                        <span className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Cost Distribution Ratio</span>
+                        
+                        {/* Cost stacked horizontal bar */}
+                        <div className="space-y-2.5">
+                          <div className="h-6 w-full rounded-lg overflow-hidden flex text-[8px] font-black text-white text-center">
+                            <div className="bg-sky-500 flex items-center justify-center" style={{ width: '65%' }}>Product (65%)</div>
+                            <div className="bg-indigo-500 flex items-center justify-center" style={{ width: '20%' }}>Freight (20%)</div>
+                            <div className="bg-emerald-500 flex items-center justify-center" style={{ width: '15%' }}>Other (15%)</div>
+                          </div>
+                          <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-[9px] font-bold text-slate-455">
+                            <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-sky-500 rounded-full"></span><span>Base product</span></div>
+                            <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span><span>Logistics freight</span></div>
+                            <div className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span><span>Duties & GST</span></div>
+                          </div>
+                        </div>
+
+                        {/* Profit margin share ratio chart representation */}
+                        <div className="pt-3 border-t border-slate-100 space-y-2">
+                          <span className="text-[10px] font-black text-slate-450 uppercase tracking-widest block">Margin Analysis</span>
+                          <div className="flex items-center gap-4">
+                            <div className="relative w-14 h-14 rounded-full border-[6px] border-slate-100 flex items-center justify-center">
+                              <span className="text-[10px] font-black text-slate-800">{calculatedCostBreakdown.margin}%</span>
+                              <div className="absolute inset-0 rounded-full border-[6px] border-emerald-500 border-t-transparent border-l-transparent border-r-transparent animate-spin-slow"></div>
+                            </div>
+                            <div className="text-[10px] font-semibold text-slate-455">
+                              <span className="block font-bold text-emerald-600">★★★★ Strong profitability index</span>
+                              <span className="block mt-0.5">Route profit margins are above Indian exporter benchmarks.</span>
+                            </div>
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* SUB-VIEW: WHAT-IF SIMULATOR PAGE */}
+            {analysisSubView === 'what-if' && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-in fade-in duration-300">
+                
+                {/* Left Panel: variables adjusters (5 cols) */}
+                <div className="lg:col-span-5 bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm space-y-5">
+                  <h3 className="text-xs font-black text-slate-855 uppercase tracking-widest border-b border-slate-100 pb-2">Simulator Settings</h3>
+                  
+                  {/* Organic cert toggles */}
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-slate-450 uppercase tracking-wider block">Organic Certification</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setWhatIfOrganic(true)}
+                        className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                          whatIfOrganic ? 'bg-sky-500 text-white border-sky-400 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-500'
+                        }`}
+                      >
+                        Yes (Certified)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setWhatIfOrganic(false)}
+                        className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                          !whatIfOrganic ? 'bg-sky-500 text-white border-sky-400 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-500'
+                        }`}
+                      >
+                        No (Convention)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Shipping mode */}
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-slate-455 uppercase tracking-wider block">Transport Method</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {['Air', 'Sea', 'Road'].map(m => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setWhatIfShippingMode(m)}
+                          className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                            whatIfShippingMode === m ? 'bg-sky-500 text-white border-sky-400 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-500'
+                          }`}
+                        >
+                          {m}
+                        </button>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* Insurance toggles */}
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-slate-450 uppercase tracking-wider block">Cargo Insurance Coverage</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setWhatIfInsuranceActive(true)}
+                        className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                          whatIfInsuranceActive ? 'bg-sky-500 text-white border-sky-400 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-500'
+                        }`}
+                      >
+                        Active
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setWhatIfInsuranceActive(false)}
+                        className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                          !whatIfInsuranceActive ? 'bg-sky-500 text-white border-sky-400 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-500'
+                        }`}
+                      >
+                        Inactive
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Tariff Adjustment slider */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[9px] font-black text-slate-450 uppercase tracking-wider">
+                      <span>Tariff Adjustment Rate</span>
+                      <span className="text-slate-800">{whatIfTariffAdj}%</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="20" 
+                      value={whatIfTariffAdj}
+                      onChange={(e) => setWhatIfTariffAdj(e.target.value)}
+                      className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-sky-500"
+                    />
+                  </div>
+
+                  {/* Logistics Partner */}
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-slate-450 uppercase tracking-wider block">Logistics Partner</label>
+                    <select
+                      value={whatIfLogisticsPartner}
+                      onChange={(e) => setWhatIfLogisticsPartner(e.target.value)}
+                      className="w-full px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-xs font-semibold focus:outline-none focus:border-sky-500 cursor-pointer"
+                    >
+                      <option>FastCargo Logistics</option>
+                      <option>GlobalShip Inc.</option>
+                      <option>TransWorld Logistics</option>
                     </select>
                   </div>
 
+                  {/* Action trigger */}
                   <button
-                    onClick={handleStartAnalysis}
-                    disabled={isAnalyzing}
-                    className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 font-bold text-xs text-white bg-sky-500 hover:bg-sky-400 disabled:opacity-50 shadow-md shadow-sky-500/10 rounded-xl transition-all cursor-pointer"
+                    onClick={handleRunSimulation}
+                    disabled={isSimulating}
+                    className="w-full py-3 text-xs font-bold text-white bg-sky-500 hover:bg-sky-400 disabled:opacity-50 rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
                   >
-                    {isAnalyzing ? (
+                    {isSimulating ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Analyzing...</span>
+                        <span>Simulating Projections...</span>
                       </>
                     ) : (
-                      <span>Start Analysis</span>
+                      <span>Run Simulation</span>
                     )}
                   </button>
                 </div>
 
-                {/* Target Country Bids (Only show if analyzed) */}
-                {analyzedProduct && (
-                  <div className="border-t border-slate-100 pt-3.5 animate-in fade-in duration-200">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Target Country Bids</span>
-                    <div className="space-y-3">
-                      
-                      {/* Germany card */}
-                      <div 
-                        onClick={() => { setSelectedCountry('Germany'); setWhatIfPrice(350); setWhatIfShipping(45); setWhatIfInsurance(12); }}
-                        className={`p-4 rounded-xl border transition-all cursor-pointer ${
-                          selectedCountry === 'Germany' 
-                            ? 'border-sky-500 bg-sky-50/15 shadow-sm scale-102 pl-5'
-                            : 'border-slate-100 bg-slate-50/20 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="flex justify-between items-center mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">🇩🇪</span>
-                            <span className="text-xs font-black text-slate-805">Germany</span>
-                          </div>
-                          <span className="text-xxs font-extrabold text-sky-655">84.6% Match</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-[10px] font-bold text-slate-450">
-                          <span>Demand: <span className="text-emerald-550">High ↑</span></span>
-                          <span>Profit: <span className="text-emerald-555">Strong</span></span>
-                        </div>
-                      </div>
+                {/* Right Panel: Projections Comparison Matrix (7 cols) */}
+                <div className="lg:col-span-7 bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm space-y-4">
+                  <h3 className="text-xs font-black text-slate-855 uppercase tracking-widest border-b border-slate-100 pb-2">
+                    Projections Comparison Matrix
+                  </h3>
 
-                      {/* UAE card */}
-                      <div 
-                        onClick={() => { setSelectedCountry('UAE'); setWhatIfPrice(350); setWhatIfShipping(30); setWhatIfInsurance(10); }}
-                        className={`p-4 rounded-xl border transition-all cursor-pointer ${
-                          selectedCountry === 'UAE' 
-                            ? 'border-sky-500 bg-sky-50/15 shadow-sm scale-102 pl-5'
-                            : 'border-slate-100 bg-slate-50/20 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="flex justify-between items-center mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">🇦🇪</span>
-                            <span className="text-xs font-black text-slate-805">UAE</span>
-                          </div>
-                          <span className="text-xxs font-extrabold text-sky-655">76.2% Match</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-[10px] font-bold text-slate-450">
-                          <span>Demand: <span className="text-slate-700">Medium</span></span>
-                          <span>Profit: <span className="text-emerald-550">Good</span></span>
-                        </div>
-                      </div>
-
-                      {/* Singapore card */}
-                      <div 
-                        onClick={() => { setSelectedCountry('Singapore'); setWhatIfPrice(350); setWhatIfShipping(35); setWhatIfInsurance(8); }}
-                        className={`p-4 rounded-xl border transition-all cursor-pointer ${
-                          selectedCountry === 'Singapore' 
-                            ? 'border-sky-500 bg-sky-50/15 shadow-sm scale-102 pl-5'
-                            : 'border-slate-100 bg-slate-50/20 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="flex justify-between items-center mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">🇸🇬</span>
-                            <span className="text-xs font-black text-slate-805">Singapore</span>
-                          </div>
-                          <span className="text-xxs font-extrabold text-sky-655">71.8% Match</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-[10px] font-bold text-slate-455">
-                          <span>Demand: <span className="text-emerald-555">Growing</span></span>
-                          <span>Profit: <span className="text-slate-700">Moderate</span></span>
-                        </div>
-                      </div>
-
+                  {isSimulating ? (
+                    <div className="p-12 text-center rounded-2xl flex flex-col items-center justify-center min-h-[250px]">
+                      <Loader2 className="w-8 h-8 text-sky-500 animate-spin mb-4" />
+                      <span className="text-xs font-black uppercase text-slate-800 tracking-wider">Evaluating Alternate Trade Conditions</span>
                     </div>
-                  </div>
-                )}
-
+                  ) : (
+                    <div className="overflow-x-auto animate-in fade-in duration-300">
+                      <table className="w-full text-left text-xs font-semibold text-slate-700 border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] font-black text-slate-450 uppercase tracking-widest">
+                            <th className="py-3 px-4">Metric</th>
+                            <th className="py-3 px-4">Current Profile</th>
+                            <th className="py-3 px-4">Simulated Projections</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50 font-medium">
+                          <tr>
+                            <td className="py-3 px-4 font-bold">AI Feasibility Score</td>
+                            <td className="py-3 px-4 text-slate-500">84/100</td>
+                            <td className="py-3 px-4">
+                              <span className="font-extrabold text-sky-655">{simulatedResults.aiScore}/100</span>
+                              {simulatedResults.aiScore > 84 && <span className="ml-1 text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">↑</span>}
+                              {simulatedResults.aiScore < 84 && <span className="ml-1 text-[10px] font-extrabold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">↓</span>}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-3 px-4 font-bold">Compliance Index</td>
+                            <td className="py-3 px-4 text-slate-500">72/100</td>
+                            <td className="py-3 px-4">
+                              <span className="font-extrabold text-slate-800">{simulatedResults.compliance}/100</span>
+                              {simulatedResults.compliance > 72 && <span className="ml-1 text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">↑</span>}
+                              {simulatedResults.compliance < 72 && <span className="ml-1 text-[10px] font-extrabold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">↓</span>}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-3 px-4 font-bold">Landed Cost / kg</td>
+                            <td className="py-3 px-4 text-slate-500">₹420</td>
+                            <td className="py-3 px-4">
+                              <span className="font-extrabold text-slate-850">₹{simulatedResults.landedCost}</span>
+                              {simulatedResults.landedCost < 420 && <span className="ml-1 text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">↓ Improvement</span>}
+                              {simulatedResults.landedCost > 420 && <span className="ml-1 text-[10px] font-extrabold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">↑ Increase</span>}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-3 px-4 font-bold">Expected Margin Profit / kg</td>
+                            <td className="py-3 px-4 text-slate-500">₹160</td>
+                            <td className="py-3 px-4">
+                              <span className="font-extrabold text-emerald-600">₹{simulatedResults.profit}</span>
+                              {simulatedResults.profit > 160 && <span className="ml-1 text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">↑ Gain</span>}
+                              {simulatedResults.profit < 160 && <span className="ml-1 text-[10px] font-extrabold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">↓ Loss</span>}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-3 px-4 font-bold">Target Country Rank</td>
+                            <td className="py-3 px-4 text-slate-500">#3</td>
+                            <td className="py-3 px-4">
+                              <span className="font-extrabold text-slate-900">#{simulatedResults.countryRank}</span>
+                              {simulatedResults.countryRank < 3 && <span className="ml-1 text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">↑ Up</span>}
+                              {simulatedResults.countryRank > 3 && <span className="ml-1 text-[10px] font-extrabold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">↓ Down</span>}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
-
-              {/* Right Panel: Tabbed Details (8 Cols) */}
-              <div className="lg:col-span-8">
-                {isAnalyzing ? (
-                  <div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center shadow-sm flex flex-col items-center justify-center min-h-[400px] animate-in fade-in duration-300">
-                    <Loader2 className="w-10 h-10 text-sky-500 animate-spin mb-4" />
-                    <span className="block text-sm font-black text-slate-800 uppercase tracking-widest">Running AI Matching Algorithms</span>
-                    <span className="block text-xxs text-slate-455 mt-1.5 max-w-xs leading-relaxed">Evaluating tariff indices, phytosanitary requirements, shipping freight costs, and country credit risks for {selectedAnalysisProduct}...</span>
-                  </div>
-                ) : !analyzedProduct ? (
-                  <div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center shadow-sm flex flex-col items-center justify-center min-h-[400px] animate-in fade-in duration-300">
-                    <div className="p-4 bg-sky-50 rounded-full text-sky-500 mb-4 animate-bounce">
-                      <Globe className="w-8 h-8" />
-                    </div>
-                    <span className="block text-sm font-black text-slate-800 uppercase tracking-widest">Ready for AI Market Analysis</span>
-                    <span className="block text-xxs text-slate-455 mt-2 max-w-sm leading-relaxed">
-                      Select a product from the dropdown on the left and click <strong>Start Analysis</strong> to calculate global duties, compliance complexity, and target market margins.
-                    </span>
-                  </div>
-                ) : (
-                  <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6 animate-in fade-in duration-300">
-                    
-                    {/* Target Header */}
-                    <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{selectedCountry === 'Germany' ? '🇩🇪' : selectedCountry === 'UAE' ? '🇦🇪' : '🇸🇬'}</span>
-                        <div>
-                          <h2 className="text-lg font-black text-slate-900 tracking-tight">{selectedCountry} Compliance & Cost Audit</h2>
-                          <span className="text-xxs font-bold text-slate-400">AI Scoring Analysis Index Score: {selectedCountry === 'Germany' ? '84.6' : selectedCountry === 'UAE' ? '76.2' : '71.8'}/100</span>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => addToast(`Target country ${selectedCountry} saved to desk.`, 'success')}
-                          className="px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-xs font-bold rounded-xl transition-all cursor-pointer"
-                        >
-                          Save Target
-                        </button>
-                        <button 
-                          onClick={() => {
-                            addToast(`Target selection locked for ${selectedCountry}.`, 'success');
-                            setActiveView('overview');
-                          }}
-                          className="px-3.5 py-2 text-xs font-bold text-white bg-sky-500 hover:bg-sky-400 rounded-xl shadow-md shadow-sky-500/5 transition-all cursor-pointer"
-                        >
-                          Lock Route
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Tab Controls */}
-                    <div className="flex border-b border-slate-100 text-xs font-bold text-slate-450 gap-4">
-                      {['overview', 'compliance', 'cost', 'why?', 'what-if'].map((tab) => (
-                        <button
-                          key={tab}
-                          onClick={() => setActiveAnalysisTab(tab)}
-                          className={`pb-2 px-1 cursor-pointer transition-colors relative uppercase text-[10px] tracking-wider ${
-                            activeAnalysisTab === tab ? 'text-sky-655 font-extrabold' : 'hover:text-slate-805'
-                          }`}
-                        >
-                          {tab}
-                          {activeAnalysisTab === tab && <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-sky-500 rounded-t-full"></div>}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Tab Contents dispatcher */}
-                    <div className="py-2 min-h-64">
-                      
-                      {/* Tab: Overview */}
-                      {activeAnalysisTab === 'overview' && (
-                        <div className="space-y-5 animate-in fade-in duration-200">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/20 text-center">
-                              <span className="block text-xxs font-bold text-slate-400 uppercase tracking-widest">Market Demand</span>
-                              <span className="block text-xl font-black text-emerald-600 mt-1">HIGH</span>
-                              <span className="text-[10px] text-emerald-500 font-semibold mt-1 block">↑ Strong organic growth</span>
-                            </div>
-                            <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/20 text-center">
-                              <span className="block text-xxs font-bold text-slate-400 uppercase tracking-widest">AI Index Score</span>
-                              <span className="block text-xl font-black text-sky-655 mt-1">{selectedCountry === 'Germany' ? '84.6/100' : selectedCountry === 'UAE' ? '76.2/100' : '71.8/100'}</span>
-                              <span className="text-[10px] text-sky-500 font-semibold mt-1 block">★★★★★ highly recommended</span>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Market Insights</h4>
-                            <ul className="space-y-2 text-xs font-semibold text-slate-500 pl-4 list-disc">
-                              <li>Growing consumer demand for single-origin organic spices.</li>
-                              <li>12% YoY import growth from South Asian countries.</li>
-                              <li>Favorable customs duty rates under bilateral trade arrangements.</li>
-                              <li>Active Indian exporter network handles over 40% of shipments.</li>
-                            </ul>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Tab: Compliance */}
-                      {activeAnalysisTab === 'compliance' && (
-                        <div className="space-y-5 animate-in fade-in duration-200">
-                          <div className="space-y-2">
-                            <h4 className="text-xs font-bold text-slate-805 uppercase tracking-widest">Required Documents & Status</h4>
-                            <p className="text-[10px] text-slate-400 font-medium">Toggle the document fields below to declare which credentials you already possess.</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                              
-                              {/* Invoice */}
-                              <div 
-                                onClick={() => toggleDoc('invoice')}
-                                className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer select-none transition-all ${
-                                  ownedDocs.invoice 
-                                    ? 'border-emerald-200 bg-emerald-50/10 text-slate-800 shadow-sm' 
-                                    : 'border-slate-200 hover:border-slate-300 bg-slate-50/30 text-slate-450'
-                                }`}
-                              >
-                                <div className="flex items-center gap-2 text-xs font-bold">
-                                  {ownedDocs.invoice ? (
-                                    <Check className="w-4.5 h-4.5 text-emerald-500 shrink-0" />
-                                  ) : (
-                                    <div className="w-4 h-4 rounded-md border border-slate-350 shrink-0"></div>
-                                  )}
-                                  <span>Commercial Invoice</span>
-                                </div>
-                                <span className={`text-[9px] uppercase font-black tracking-widest px-2 py-0.5 rounded-full ${
-                                  ownedDocs.invoice ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-450'
-                                }`}>
-                                  {ownedDocs.invoice ? 'Active' : 'Missing'}
-                                </span>
-                              </div>
-
-                              {/* Packing List */}
-                              <div 
-                                onClick={() => toggleDoc('packingList')}
-                                className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer select-none transition-all ${
-                                  ownedDocs.packingList 
-                                    ? 'border-emerald-200 bg-emerald-50/10 text-slate-800 shadow-sm' 
-                                    : 'border-slate-200 hover:border-slate-300 bg-slate-50/30 text-slate-455'
-                                }`}
-                              >
-                                <div className="flex items-center gap-2 text-xs font-bold">
-                                  {ownedDocs.packingList ? (
-                                    <Check className="w-4.5 h-4.5 text-emerald-500 shrink-0" />
-                                  ) : (
-                                    <div className="w-4 h-4 rounded-md border border-slate-350 shrink-0"></div>
-                                  )}
-                                  <span>Packing List</span>
-                                </div>
-                                <span className={`text-[9px] uppercase font-black tracking-widest px-2 py-0.5 rounded-full ${
-                                  ownedDocs.packingList ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-450'
-                                }`}>
-                                  {ownedDocs.packingList ? 'Active' : 'Missing'}
-                                </span>
-                              </div>
-
-                              {/* Origin Cert */}
-                              <div 
-                                onClick={() => toggleDoc('originCert')}
-                                className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer select-none transition-all ${
-                                  ownedDocs.originCert 
-                                    ? 'border-emerald-200 bg-emerald-50/10 text-slate-800 shadow-sm' 
-                                    : 'border-slate-200 hover:border-slate-300 bg-slate-50/30 text-slate-455'
-                                }`}
-                              >
-                                <div className="flex items-center gap-2 text-xs font-bold">
-                                  {ownedDocs.originCert ? (
-                                    <Check className="w-4.5 h-4.5 text-emerald-500 shrink-0" />
-                                  ) : (
-                                    <div className="w-4 h-4 rounded-md border border-slate-355 shrink-0"></div>
-                                  )}
-                                  <span>Certificate of Origin</span>
-                                </div>
-                                <span className={`text-[9px] uppercase font-black tracking-widest px-2 py-0.5 rounded-full ${
-                                  ownedDocs.originCert ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-450'
-                                }`}>
-                                  {ownedDocs.originCert ? 'Active' : 'Missing'}
-                                </span>
-                              </div>
-
-                              {/* Organic Cert */}
-                              <div 
-                                onClick={() => toggleDoc('organicCert')}
-                                className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer select-none transition-all ${
-                                  ownedDocs.organicCert 
-                                    ? 'border-emerald-200 bg-emerald-50/10 text-slate-800 shadow-sm' 
-                                    : 'border-slate-200 hover:border-slate-300 bg-slate-50/30 text-slate-455'
-                                }`}
-                              >
-                                <div className="flex items-center gap-2 text-xs font-bold">
-                                  {ownedDocs.organicCert ? (
-                                    <Check className="w-4.5 h-4.5 text-emerald-500 shrink-0" />
-                                  ) : (
-                                    <div className="w-4 h-4 rounded-md border border-slate-355 shrink-0"></div>
-                                  )}
-                                  <span>Organic Certification</span>
-                                </div>
-                                <span className={`text-[9px] uppercase font-black tracking-widest px-2 py-0.5 rounded-full ${
-                                  ownedDocs.organicCert ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-450'
-                                }`}>
-                                  {ownedDocs.organicCert ? 'Active' : 'Missing'}
-                                </span>
-                              </div>
-
-                              {/* Phyto Report */}
-                              <div 
-                                onClick={() => toggleDoc('phytoReport')}
-                                className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer select-none transition-all ${
-                                  ownedDocs.phytoReport 
-                                    ? 'border-emerald-200 bg-emerald-50/10 text-slate-800 shadow-sm' 
-                                    : 'border-slate-200 hover:border-slate-300 bg-slate-50/30 text-slate-455'
-                                }`}
-                              >
-                                <div className="flex items-center gap-2 text-xs font-bold">
-                                  {ownedDocs.phytoReport ? (
-                                    <Check className="w-4.5 h-4.5 text-emerald-500 shrink-0" />
-                                  ) : (
-                                    <div className="w-4 h-4 rounded-md border border-slate-355 shrink-0"></div>
-                                  )}
-                                  <span>Lab Test Phytosanitary Report</span>
-                                </div>
-                                <span className={`text-[9px] uppercase font-black tracking-widest px-2 py-0.5 rounded-full ${
-                                  ownedDocs.phytoReport ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-455'
-                                }`}>
-                                  {ownedDocs.phytoReport ? 'Active' : 'Missing'}
-                                </span>
-                              </div>
-
-                              {/* FSSAI License */}
-                              <div 
-                                onClick={() => toggleDoc('fssaiLicense')}
-                                className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer select-none transition-all ${
-                                  ownedDocs.fssaiLicense 
-                                    ? 'border-emerald-200 bg-emerald-50/10 text-slate-800 shadow-sm' 
-                                    : 'border-slate-200 hover:border-slate-300 bg-slate-50/30 text-slate-455'
-                                }`}
-                              >
-                                <div className="flex items-center gap-2 text-xs font-bold">
-                                  {ownedDocs.fssaiLicense ? (
-                                    <Check className="w-4.5 h-4.5 text-emerald-500 shrink-0" />
-                                  ) : (
-                                    <div className="w-4 h-4 rounded-md border border-slate-355 shrink-0"></div>
-                                  )}
-                                  <span>FSSAI Export License</span>
-                                </div>
-                                <span className={`text-[9px] uppercase font-black tracking-widest px-2 py-0.5 rounded-full ${
-                                  ownedDocs.fssaiLicense ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-455'
-                                }`}>
-                                  {ownedDocs.fssaiLicense ? 'Active' : 'Missing'}
-                                </span>
-                              </div>
-
-                            </div>
-                          </div>
-
-                          {(() => {
-                            const count = Object.values(ownedDocs).filter(Boolean).length;
-                            // Calculate a realistic complexity score that falls as more documents are owned
-                            const compScore = Math.max(100 - (count * 15), 10);
-                            const ratingLabel = compScore <= 40 ? 'Low Complexity' : compScore <= 70 ? 'Moderate' : 'High Complexity';
-                            const textClass = compScore <= 40 ? 'text-emerald-600' : compScore <= 70 ? 'text-amber-600' : 'text-red-500';
-                            const barClass = compScore <= 40 ? 'bg-emerald-500' : compScore <= 70 ? 'bg-amber-500' : 'bg-red-500';
-
-                            return (
-                              <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/20 space-y-2 animate-in fade-in duration-300">
-                                <div className="flex justify-between items-center text-xs font-bold">
-                                  <span className="text-slate-450 uppercase tracking-widest">Compliance Complexity Score</span>
-                                  <span className={`font-black ${textClass}`}>{compScore}/100 ({ratingLabel})</span>
-                                </div>
-                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                                  <div className={`h-full ${barClass} rounded-full transition-all duration-500`} style={{ width: `${compScore}%` }}></div>
-                                </div>
-                                <span className="text-[10px] text-slate-400 block mt-1 font-medium">
-                                  {count} of 6 required documents are currently verified. Click card blocks above to add or remove active declarations.
-                                </span>
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      )}
-
-                      {/* Tab: Cost & Profit */}
-                      {activeAnalysisTab === 'cost' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-200">
-                          
-                          {/* Cost Breakdown */}
-                          <div className="space-y-3">
-                            <h4 className="text-xs font-bold text-slate-805 uppercase tracking-widest">Cost Breakdown (per kg)</h4>
-                            <div className="border border-slate-100 rounded-xl p-4 text-xs font-semibold space-y-2.5">
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Product Cost</span>
-                                <span className="text-slate-800">₹350.00</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Shipping Cost (Freight)</span>
-                                <span className="text-slate-800">₹45.00</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Insurance charges</span>
-                                <span className="text-slate-800">₹12.00</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Customs Duty (5% estimate)</span>
-                                <span className="text-slate-800">₹20.35</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Port clearing charges</span>
-                                <span className="text-slate-800">₹8.00</span>
-                              </div>
-                              <div className="border-t border-slate-100 pt-2.5 flex justify-between font-bold">
-                                <span className="text-slate-805">Total Landed Cost</span>
-                                <span className="text-sky-600">₹435.35/kg</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Profit Estimation */}
-                          <div className="space-y-3">
-                            <h4 className="text-xs font-bold text-slate-805 uppercase tracking-widest">Profit Margin Audit</h4>
-                            <div className="border border-slate-100 rounded-xl p-4 text-xs font-semibold space-y-2.5">
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Target Selling Price</span>
-                                <span className="text-slate-800">₹620.00</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Total Landed Cost</span>
-                                <span className="text-slate-800">₹435.35</span>
-                              </div>
-                              <div className="border-t border-slate-100 pt-2.5 flex justify-between font-bold">
-                                <span className="text-slate-805">Estimated Profit</span>
-                                <span className="text-emerald-600">₹184.65/kg</span>
-                              </div>
-                              <div className="flex justify-between font-bold">
-                                <span className="text-slate-800">Estimated Profit Margin</span>
-                                <span className="text-emerald-600">29.8%</span>
-                              </div>
-                              
-                              <div className="pt-2 flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50/50 p-2 rounded-lg">
-                                <TrendingUp className="w-3.5 h-3.5" />
-                                <span>💰 Strong profitability index for Germany route</span>
-                              </div>
-                            </div>
-                          </div>
-
-                        </div>
-                      )}
-
-                      {/* Tab: Why This */}
-                      {activeAnalysisTab === 'why?' && (
-                        <div className="space-y-5 animate-in fade-in duration-200">
-                          <h4 className="text-xs font-bold text-slate-805 uppercase tracking-widest">Explainable AI Factor Analysis</h4>
-                          
-                          <div className="space-y-3">
-                            {/* Factor 1 */}
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-[11px] font-bold">
-                                <span className="text-slate-700">Market Demand (Import Growth)</span>
-                                <span className="text-emerald-600">+31 points</span>
-                              </div>
-                              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-emerald-500 w-[62%] rounded-full"></div>
-                              </div>
-                            </div>
-
-                            {/* Factor 2 */}
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-[11px] font-bold">
-                                <span className="text-slate-700">Estimated Profit Margin</span>
-                                <span className="text-emerald-600">+18 points</span>
-                              </div>
-                              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-emerald-500 w-[36%] rounded-full"></div>
-                              </div>
-                            </div>
-
-                            {/* Factor 3 */}
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-[11px] font-bold">
-                                <span className="text-slate-750">Logistics Reliability Performance</span>
-                                <span className="text-emerald-600">+10 points</span>
-                              </div>
-                              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-emerald-500 w-[20%] rounded-full"></div>
-                              </div>
-                            </div>
-
-                            {/* Factor 4 */}
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-[11px] font-bold">
-                                <span className="text-slate-700">Compliance complexity penalties</span>
-                                <span className="text-red-500">-8 points</span>
-                              </div>
-                              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-red-500 w-[16%] rounded-full"></div>
-                              </div>
-                              <span className="text-[10px] text-slate-400 block ml-1">↳ 2 certifications missing in profile</span>
-                            </div>
-
-                            {/* Factor 5 */}
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-[11px] font-bold">
-                                <span className="text-slate-700">Country risk (tariffs)</span>
-                                <span className="text-red-500">-3 points</span>
-                              </div>
-                              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-red-500 w-[6%] rounded-full"></div>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="border-t border-slate-100 pt-4 flex justify-between items-center text-xs font-bold text-slate-450">
-                            <span>Based on 15 custom data points</span>
-                            <span className="text-slate-805">AI Model Confidence: 87%</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Tab: What-If */}
-                      {activeAnalysisTab === 'what-if' && (
-                        <div className="space-y-6 animate-in fade-in duration-200">
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Adjust Sliders */}
-                            <div className="space-y-4">
-                              <h4 className="text-xs font-bold text-slate-805 uppercase tracking-widest">Adjust Variables</h4>
-                              
-                              {/* Price */}
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-xs font-bold">
-                                  <span className="text-slate-550">Product Cost (₹/kg)</span>
-                                  <span className="text-slate-800">₹{whatIfPrice}</span>
-                                </div>
-                                <input 
-                                  type="range" 
-                                  min="200" 
-                                  max="800" 
-                                  value={whatIfPrice}
-                                  onChange={(e) => setWhatIfPrice(e.target.value)}
-                                  className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-sky-500"
-                                />
-                              </div>
-
-                              {/* Shipping */}
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-xs font-bold">
-                                  <span className="text-slate-555">Shipping Cost (₹/kg)</span>
-                                  <span className="text-slate-800">₹{whatIfShipping}</span>
-                                </div>
-                                <input 
-                                  type="range" 
-                                  min="10" 
-                                  max="150" 
-                                  value={whatIfShipping}
-                                  onChange={(e) => setWhatIfShipping(e.target.value)}
-                                  className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-sky-500"
-                                />
-                              </div>
-
-                              {/* Insurance */}
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-xs font-bold">
-                                  <span className="text-slate-555">Insurance Cost (₹/kg)</span>
-                                  <span className="text-slate-800">₹{whatIfInsurance}</span>
-                                </div>
-                                <input 
-                                  type="range" 
-                                  min="5" 
-                                  max="50" 
-                                  value={whatIfInsurance}
-                                  onChange={(e) => setWhatIfInsurance(e.target.value)}
-                                  className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-sky-500"
-                                />
-                              </div>
-
-                              <button 
-                                onClick={handleRecalculate}
-                                disabled={recalculating}
-                                className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-sky-500 hover:bg-sky-400 rounded-xl shadow-md transition-all cursor-pointer"
-                              >
-                                {recalculating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Recalculate'}
-                              </button>
-                            </div>
-
-                            {/* Calculated Results */}
-                            <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-5 space-y-4">
-                              <h4 className="text-xs font-bold text-slate-855 uppercase tracking-widest border-b border-slate-200 pb-2">Updated Results</h4>
-                              
-                              <div className="space-y-2.5 text-xs font-bold">
-                                <div className="flex justify-between">
-                                  <span className="text-slate-450">Total Landed Cost</span>
-                                  <span className="text-slate-805">₹{whatIfResults.landedCost}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-slate-400">Estimated Profit</span>
-                                  <span className="text-emerald-600">₹{whatIfResults.estimatedProfit}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-slate-400">Estimated Margin</span>
-                                  <span className="text-emerald-600">{whatIfResults.margin}%</span>
-                                </div>
-                                <div className="flex justify-between border-t border-slate-200 pt-2.5">
-                                  <span className="text-slate-850 uppercase tracking-widest text-[10px]">AI Score Target</span>
-                                  <span className="text-sky-655 font-extrabold text-[10px]">{whatIfResults.aiScore}/100</span>
-                                </div>
-                              </div>
-                            </div>
-
-                          </div>
-
-                        </div>
-                      )}
-
-                    </div>
-
-                  </div>
-                )}
-              </div>
-
-            </div>
-
+            )}
           </div>
         )}
 
-        {/* ---------------------------------------------------- */}
-        {/* VIEW: ORDERS VIEW */}
-        {/* ---------------------------------------------------- */}
-        {activeView === 'orders' && (
+           {activeView === 'orders' && (
           <div className="space-y-6 animate-in fade-in duration-300">
             <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Orders Registry</h1>
-              <p className="text-xs text-slate-500 mt-1 font-medium">Manage incoming contracts and freight assignments from foreign importers.</p>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Export Orders</h1>
+              <p className="text-xs text-slate-500 mt-1 font-medium">Manage incoming contracts, tracking logs, and freight assignments.</p>
             </div>
 
             {/* Filter buttons */}
@@ -1689,66 +2234,77 @@ export default function Exporter({ onNavigate }) {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] font-black text-slate-450 uppercase tracking-widest">
+                    <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] font-black text-slate-455 uppercase tracking-widest">
                       <th className="py-4 px-5">Order ID</th>
-                      <th className="py-4 px-5">Importer</th>
                       <th className="py-4 px-5">Product</th>
+                      <th className="py-4 px-5">Destination Country</th>
                       <th className="py-4 px-5">Quantity</th>
                       <th className="py-4 px-5">Value</th>
+                      <th className="py-4 px-5">Logistics Partner</th>
                       <th className="py-4 px-5">Status</th>
+                      <th className="py-4 px-5">Tracking</th>
                       <th className="py-4 px-5 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
                     {orders
                       .filter(o => orderFilter === 'All' || o.status === orderFilter)
-                      .map(o => (
-                        <tr key={o.id} className="hover:bg-slate-50/40 transition-colors">
-                          <td className="py-4 px-5 font-mono text-slate-900 font-bold">#{o.id}</td>
-                          <td className="py-4 px-5">
-                            <span className="block font-bold text-slate-800">{o.importer}</span>
-                            <span className="block text-[10px] text-slate-400 mt-0.5">{o.country}</span>
-                          </td>
-                          <td className="py-4 px-5 text-slate-500">{o.product}</td>
-                          <td className="py-4 px-5 text-slate-500">{o.qty}</td>
-                          <td className="py-4 px-5 text-slate-805">{o.value}</td>
-                          <td className="py-4 px-5">
-                            {o.status === 'Pending' && (
-                              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                                Pending Action
-                              </span>
-                            )}
-                            {o.status === 'Accepted' && (
-                              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                Accepted
-                              </span>
-                            )}
-                            {o.status === 'Rejected' && (
-                              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
-                                <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                                Rejected
-                              </span>
-                            )}
-                            {o.status === 'Shipped' && (
-                              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-sky-655 bg-sky-50 px-2 py-0.5 rounded-full">
-                                <span className="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
-                                In Transit
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-4 px-5 text-right">
-                            <button 
-                              onClick={() => setSelectedOrder(o)}
-                              className="p-1.5 text-slate-400 hover:text-sky-655 rounded-lg hover:bg-slate-50 cursor-pointer"
-                              title="Inspect Details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      .map(o => {
+                        const shipment = shipments.find(s => s.orderId === o.id);
+                        const partner = shipment ? shipment.logistics : (o.logisticsPartner || 'TBD');
+                        const trackNum = shipment ? shipment.tracking : 'TBD';
+                        return (
+                          <tr key={o.id} className="hover:bg-slate-50/40 transition-colors">
+                            <td className="py-4 px-5 font-mono text-slate-900 font-bold">#{o.id}</td>
+                            <td className="py-4 px-5 text-slate-800">{o.product}</td>
+                            <td className="py-4 px-5">
+                              <div className="flex items-center gap-1.5">
+                                <span>{o.country === 'Germany' ? '🇩🇪' : o.country === 'UAE' ? '🇦🇪' : '🇸🇬'}</span>
+                                <span className="font-bold text-slate-800">{o.country}</span>
+                              </div>
+                            </td>
+                            <td className="py-4 px-5 text-slate-500">{o.qty}</td>
+                            <td className="py-4 px-5 text-slate-805">{o.value}</td>
+                            <td className="py-4 px-5 text-slate-500 font-semibold">{partner}</td>
+                            <td className="py-4 px-5">
+                              {o.status === 'Pending' && (
+                                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                  Pending
+                                </span>
+                              )}
+                              {o.status === 'Accepted' && (
+                                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                  Accepted
+                                </span>
+                              )}
+                              {o.status === 'Rejected' && (
+                                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                                  Rejected
+                                </span>
+                              )}
+                              {o.status === 'Shipped' && (
+                                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-sky-655 bg-sky-50 px-2 py-0.5 rounded-full">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
+                                  In Transit
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-4 px-5 font-mono text-[10px] text-slate-450">{trackNum}</td>
+                            <td className="py-4 px-5 text-right">
+                              <button 
+                                onClick={() => setSelectedOrder(o)}
+                                className="p-1.5 text-slate-400 hover:text-sky-655 rounded-lg hover:bg-slate-50 cursor-pointer"
+                                title="Inspect Details"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                   </tbody>
                 </table>
               </div>

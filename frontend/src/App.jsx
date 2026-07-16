@@ -45,7 +45,7 @@ function App() {
 
   // Default: Landing page "/"
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-700 flex flex-col antialiased select-none font-sans relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-700 flex flex-col antialiased font-sans relative overflow-x-hidden">
       {/* Decorative Global Background Glows */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] bg-gradient-to-b from-indigo-500/5 via-sky-500/2 to-transparent rounded-full glow-blur pointer-events-none z-0"></div>
       

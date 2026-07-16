@@ -6,7 +6,7 @@ export default function Login({ onNavigate }) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  
+
   // Validation & Error States
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -25,7 +25,7 @@ export default function Login({ onNavigate }) {
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       newErrors.email = 'Please enter a valid email address';
     }
-    
+
     if (!password) {
       newErrors.password = 'Password is required';
     } else if (password.length < 6) {
@@ -46,7 +46,7 @@ export default function Login({ onNavigate }) {
     }
 
     setLoading(true);
-    
+
     // Simulate API request
     setTimeout(() => {
       setLoading(false);
@@ -58,13 +58,13 @@ export default function Login({ onNavigate }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-700 flex flex-col relative select-none font-sans overflow-hidden">
-      
+    <div className="min-h-screen bg-[#f8fafc] text-slate-700 flex flex-col relative font-sans overflow-hidden">
+
       {/* Background Animated Gradient Overlay */}
       <div className="absolute inset-0 pointer-events-none z-0">
         <div className="absolute top-[20%] left-[20%] w-[500px] h-[500px] bg-sky-500/5 rounded-full blur-[100px] animate-pulse"></div>
         <div className="absolute bottom-[20%] right-[20%] w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[100px] animate-float"></div>
-        
+
         {/* Subtle grid/dot pattern */}
         <div className="absolute inset-0 opacity-[0.4]" style={{
           backgroundImage: `radial-gradient(#e2e8f0 1.5px, transparent 1.5px)`,
@@ -74,11 +74,10 @@ export default function Login({ onNavigate }) {
 
       {/* Toast Notification */}
       {toast && (
-        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-xl border backdrop-blur-md shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300 ${
-          toast.type === 'success' 
-            ? 'bg-emerald-50 border-emerald-200/50 text-white shadow-emerald-500/10' 
-            : 'bg-red-50 border-red-200 text-red-800 shadow-red-500/5'
-        }`}>
+        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-xl border backdrop-blur-md shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300 ${toast.type === 'success'
+          ? 'bg-emerald-50 border-emerald-200/50 text-white shadow-emerald-500/10'
+          : 'bg-red-50 border-red-200 text-red-800 shadow-red-500/5'
+          }`}>
           <div className={`w-2.5 h-2.5 rounded-full ${toast.type === 'success' ? 'bg-white' : 'bg-red-500'}`}></div>
           <span className="text-sm font-semibold">{toast.message}</span>
         </div>
@@ -97,17 +96,17 @@ export default function Login({ onNavigate }) {
 
       {/* Main Split Content */}
       <div className="flex-grow grid grid-cols-1 lg:grid-cols-12 min-h-screen relative z-10">
-        
+
         {/* Left Side: Modern Graphic & Testimonial (60%) */}
         <div className="hidden lg:flex lg:col-span-7 bg-slate-50/50 border-r border-slate-200/80 flex-col items-center justify-center p-12 relative overflow-hidden">
-          
+
           {/* Subtle geometric circles */}
           <div className="absolute w-[400px] h-[400px] border border-slate-200/60 rounded-full z-0"></div>
           <div className="absolute w-[550px] h-[550px] border border-dashed border-slate-200/50 rounded-full z-0 animate-spin-slow"></div>
 
           {/* Central Flat Style Human Illustration */}
           <div className="relative z-10 flex flex-col items-center max-w-lg text-center">
-            
+
             {/* SVG Illustration Container */}
             <div className="w-full max-w-[340px] aspect-square flex items-center justify-center relative mb-8">
               <svg viewBox="0 0 300 300" className="w-full h-full">
@@ -148,7 +147,7 @@ export default function Login({ onNavigate }) {
                   <path d="M 146 190 L 154 190 L 152 210 L 148 210 Z" fill="#3b82f6" />
                   {/* Collars */}
                   <path d="M 130 190 L 142 200 L 148 190 M 170 190 L 158 200 L 152 190" fill="none" stroke="#f1f5f9" strokeWidth="1.5" />
-                  
+
                   {/* Head skin */}
                   <circle cx="150" cy="165" r="18" fill="#cbd5e1" />
                   {/* Hair */}
@@ -159,7 +158,7 @@ export default function Login({ onNavigate }) {
                   <rect x="141" y="201" width="26" height="14" fill="#3b82f6" fillOpacity="0.1" />
                   {/* Green glowing indicator on device */}
                   <circle cx="154" cy="208" r="2.5" fill="#10b981" />
-                  
+
                   {/* Hands */}
                   <path d="M 125 210 Q 130 205 136 210 M 175 210 Q 170 205 164 210" stroke="#cbd5e1" strokeWidth="3" strokeLinecap="round" fill="none" />
                 </g>
@@ -181,12 +180,11 @@ export default function Login({ onNavigate }) {
 
         {/* Right Side: Login Panel (40%) */}
         <div className="lg:col-span-5 flex flex-col items-center justify-center p-6 sm:p-12 relative">
-          
+
           {/* Form Card wrapper */}
-          <div className={`w-full max-w-md bg-white/70 border border-slate-200/80 backdrop-blur-xl rounded-2xl p-8 shadow-2xl transition-transform ${
-            shake ? 'animate-[shake_0.4s_ease-in-out]' : ''
-          }`}>
-            
+          <div className={`w-full max-w-md bg-white/70 border border-slate-200/80 backdrop-blur-xl rounded-2xl p-8 shadow-2xl transition-transform ${shake ? 'animate-[shake_0.4s_ease-in-out]' : ''
+            }`}>
+
             {/* Header info */}
             <div className="text-center sm:text-left mb-8">
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">Welcome Back</h1>
@@ -197,7 +195,7 @@ export default function Login({ onNavigate }) {
 
             {/* Login form */}
             <form onSubmit={handleLoginSubmit} className="space-y-6">
-              
+
 
 
               {/* Email Input */}
@@ -215,9 +213,8 @@ export default function Login({ onNavigate }) {
                       if (errors.email) setErrors({ ...errors, email: null });
                     }}
                     placeholder="name@company.com"
-                    className={`w-full pl-10 pr-4 py-3 bg-white border rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all ${
-                      errors.email ? 'border-red-500/50 bg-red-50/5' : 'border-slate-200'
-                    }`}
+                    className={`w-full pl-10 pr-4 py-3 bg-white border rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all ${errors.email ? 'border-red-500/50 bg-red-50/5' : 'border-slate-200'
+                      }`}
                   />
                 </div>
                 {errors.email && (
@@ -249,9 +246,8 @@ export default function Login({ onNavigate }) {
                       if (errors.password) setErrors({ ...errors, password: null });
                     }}
                     placeholder="••••••••"
-                    className={`w-full pl-10 pr-12 py-3 bg-white border rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all ${
-                      errors.password ? 'border-red-500/50 bg-red-50/5' : 'border-slate-200'
-                    }`}
+                    className={`w-full pl-10 pr-12 py-3 bg-white border rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all ${errors.password ? 'border-red-500/50 bg-red-50/5' : 'border-slate-200'
+                      }`}
                   />
                   <button
                     type="button"
@@ -268,7 +264,7 @@ export default function Login({ onNavigate }) {
 
               {/* Remember me Checkbox */}
               <div className="flex items-center">
-                <label className="flex items-center gap-2.5 text-sm font-semibold text-slate-500 cursor-pointer select-none">
+                <label className="flex items-center gap-2.5 text-sm font-semibold text-slate-500 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={rememberMe}
