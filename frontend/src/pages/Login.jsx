@@ -6,6 +6,7 @@ export default function Login({ onNavigate }) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [role, setRole] = useState('exporter'); // 'exporter', 'logistics'
 
   // Validation & Error States
   const [loading, setLoading] = useState(false);
@@ -52,7 +53,11 @@ export default function Login({ onNavigate }) {
       setLoading(false);
       triggerToast('success', 'Authenticated successfully! Redirecting...');
       setTimeout(() => {
-        onNavigate('/exporter');
+        if (role === 'logistics') {
+          onNavigate('/logistics');
+        } else {
+          onNavigate('/exporter');
+        }
       }, 1500);
     }, 1800);
   };
@@ -196,7 +201,27 @@ export default function Login({ onNavigate }) {
             {/* Login form */}
             <form onSubmit={handleLoginSubmit} className="space-y-6">
 
-
+              {/* Role Selector Tabs */}
+              <div className="grid grid-cols-2 gap-2 bg-slate-55/60 p-1 rounded-xl border border-slate-100/80 select-none">
+                <button
+                  type="button"
+                  onClick={() => setRole('exporter')}
+                  className={`py-1.5 rounded-lg text-[10px] uppercase tracking-wider font-black transition-all cursor-pointer ${
+                    role === 'exporter' ? 'bg-white text-sky-655 shadow-sm' : 'text-slate-400 hover:text-slate-700'
+                  }`}
+                >
+                  Exporter
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('logistics')}
+                  className={`py-1.5 rounded-lg text-[10px] uppercase tracking-wider font-black transition-all cursor-pointer ${
+                    role === 'logistics' ? 'bg-white text-sky-655 shadow-sm' : 'text-slate-400 hover:text-slate-700'
+                  }`}
+                >
+                  Logistics Partner
+                </button>
+              </div>
 
               {/* Email Input */}
               <div className="space-y-2 relative">

@@ -10,6 +10,7 @@ import Footer from './components/Footer';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Exporter from './pages/Exporter';
+import Logistics from './pages/Logistics';
 
 function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -41,6 +42,10 @@ function App() {
 
   if (currentPath === '/exporter') {
     return <Exporter onNavigate={navigate} />;
+  }
+
+  if (currentPath === '/logistics') {
+    return <Logistics onNavigate={navigate} />;
   }
 
   // Default: Landing page "/"

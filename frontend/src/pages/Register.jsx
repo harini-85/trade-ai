@@ -128,7 +128,11 @@ export default function Register({ onNavigate }) {
       setLoading(false);
       triggerToast('success', 'Account created successfully! Redirecting...');
       setTimeout(() => {
-        onNavigate('/exporter');
+        if (role === 'logistics') {
+          onNavigate('/logistics');
+        } else {
+          onNavigate('/exporter');
+        }
       }, 1500);
     }, 2000);
   };

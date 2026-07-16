@@ -15,11 +15,21 @@ export default function Exporter({ onNavigate }) {
   
   // Notifications Dropdown
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 1, text: "Market analysis completed for Turmeric Powder", time: "2 hours ago", type: "analysis", read: false },
-    { id: 2, text: "New order #ORD-001 received from Al Noor Trading", time: "5 hours ago", type: "order", read: false },
-    { id: 3, text: "Shipment #SH-042 reached customs in Germany", time: "1 day ago", type: "shipment", read: true }
-  ]);
+  const [notifications, setNotifications] = useState(() => {
+    const saved = localStorage.getItem('tradewise_notifications');
+    if (saved) return JSON.parse(saved);
+    const seed = [
+      { id: 1, text: "Market analysis completed for Turmeric Powder", time: "2 hours ago", type: "analysis", read: false },
+      { id: 2, text: "New order #ORD-001 received from Al Noor Trading", time: "5 hours ago", type: "order", read: false },
+      { id: 3, text: "Shipment #SH-042 reached customs in Germany", time: "1 day ago", type: "shipment", read: true }
+    ];
+    localStorage.setItem('tradewise_notifications', JSON.stringify(seed));
+    return seed;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('tradewise_notifications', JSON.stringify(notifications));
+  }, [notifications]);
 
   // Toast stack state
   const [toasts, setToasts] = useState([]);
@@ -56,21 +66,63 @@ export default function Exporter({ onNavigate }) {
   const [drawerLoading, setDrawerLoading] = useState(false);
 
   // 2. Seed Orders State
-  const [orders, setOrders] = useState([
-    { id: 'ORD-001', importer: "Al Noor Trading", country: "UAE", email: "alnoor@trading.ae", phone: "+971-50-1234567", product: "Organic Turmeric Powder", hscode: "0910.30", qty: "500 kg", value: "₹1,75,000", status: "Pending", date: "15 July 2026", delivery: "30 July 2026" },
-    { id: 'ORD-002', importer: "EuroSpice GmbH", country: "Germany", email: "info@eurospice.de", phone: "+49-89-987654", product: "Cumin Seeds", hscode: "0909.31", qty: "200 kg", value: "₹84,000", status: "Accepted", date: "12 July 2026", delivery: "28 July 2026" },
-    { id: 'ORD-003', importer: "SingaFoods", country: "Singapore", email: "buying@singafoods.sg", phone: "+65-6789-0123", product: "Green Cardamom", hscode: "0908.31", qty: "100 kg", value: "₹1,20,000", status: "Shipped", date: "10 July 2026", delivery: "25 July 2026" }
-  ]);
+  const [orders, setOrders] = useState(() => {
+    const saved = localStorage.getItem('tradewise_orders');
+    if (saved) return JSON.parse(saved);
+    const seed = [
+      { id: 'ORD-001', importer: "Al Noor Trading", country: "UAE", email: "alnoor@trading.ae", phone: "+971-50-1234567", product: "Organic Turmeric Powder", hscode: "0910.30", qty: "500 kg", value: "₹1,75,000", status: "Pending", date: "15 July 2026", delivery: "30 July 2026", logisticsPartner: "TBD" },
+      { id: 'ORD-002', importer: "EuroSpice GmbH", country: "Germany", email: "info@eurospice.de", phone: "+49-89-987654", product: "Cumin Seeds", hscode: "0909.31", qty: "200 kg", value: "₹84,000", status: "Accepted", date: "12 July 2026", delivery: "28 July 2026", logisticsPartner: "FastCargo Logistics" },
+      { id: 'ORD-003', importer: "SingaFoods", country: "Singapore", email: "buying@singafoods.sg", phone: "+65-6789-0123", product: "Green Cardamom", hscode: "0908.31", qty: "100 kg", value: "₹1,20,000", status: "Shipped", date: "10 July 2026", delivery: "25 July 2026", logisticsPartner: "TransWorld Logistics" }
+    ];
+    localStorage.setItem('tradewise_orders', JSON.stringify(seed));
+    return seed;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('tradewise_orders', JSON.stringify(orders));
+  }, [orders]);
+
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderFilter, setOrderFilter] = useState('All');
 
   // 3. Seed Shipments State
-  const [shipments, setShipments] = useState([
-    { id: 'SH-042', orderId: 'ORD-002', logistics: "FastCargo Logistics", method: "Sea Freight", tracking: "FCL-MUM-HAM-2026-042", dest: "Germany", status: "In Transit", eta: "28 July 2026", currentLoc: "Vessel departed Mumbai Port, en route to Hamburg" },
-    { id: 'SH-041', orderId: 'ORD-001', logistics: "GlobalShip Inc.", method: "Air Freight", tracking: "GSI-DEL-DXB-2026-041", dest: "UAE", status: "Customs Clearance", eta: "24 July 2026", currentLoc: "Held at Dubai Port for customs document audit" },
-    { id: 'SH-040', orderId: 'ORD-003', logistics: "TransWorld Logistics", method: "Sea Freight", tracking: "TWL-MUM-SIN-2026-040", dest: "Singapore", status: "Delivered", eta: "22 July 2026", currentLoc: "Delivered at SingaFoods warehouse, Singapore" }
-  ]);
+  const [shipments, setShipments] = useState(() => {
+    const saved = localStorage.getItem('tradewise_shipments');
+    if (saved) return JSON.parse(saved);
+    const seed = [
+      { id: 'SH-042', orderId: 'ORD-002', logistics: "FastCargo Logistics", method: "Sea Freight", tracking: "FCL-MUM-HAM-2026-042", dest: "Germany", status: "In Transit", eta: "28 July 2026", currentLoc: "Vessel departed Mumbai Port, en route to Hamburg" },
+      { id: 'SH-041', orderId: 'ORD-001', logistics: "GlobalShip Inc.", method: "Air Freight", tracking: "GSI-DEL-DXB-2026-041", dest: "UAE", status: "Customs Clearance", eta: "24 July 2026", currentLoc: "Held at Dubai Port for customs document audit" },
+      { id: 'SH-040', orderId: 'ORD-003', logistics: "TransWorld Logistics", method: "Sea Freight", tracking: "TWL-MUM-SIN-2026-040", dest: "Singapore", status: "Delivered", eta: "22 July 2026", currentLoc: "Delivered at SingaFoods warehouse, Singapore" }
+    ];
+    localStorage.setItem('tradewise_shipments', JSON.stringify(seed));
+    return seed;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('tradewise_shipments', JSON.stringify(shipments));
+  }, [shipments]);
+
+  // Periodic and Event-based sync
+  useEffect(() => {
+    const syncData = () => {
+      const savedOrders = localStorage.getItem('tradewise_orders');
+      if (savedOrders) setOrders(JSON.parse(savedOrders));
+      const savedShipments = localStorage.getItem('tradewise_shipments');
+      if (savedShipments) setShipments(JSON.parse(savedShipments));
+      const savedNotifs = localStorage.getItem('tradewise_notifications');
+      if (savedNotifs) setNotifications(JSON.parse(savedNotifs));
+    };
+
+    window.addEventListener('storage', syncData);
+    const interval = setInterval(syncData, 2000);
+    return () => {
+      window.removeEventListener('storage', syncData);
+      clearInterval(interval);
+    };
+  }, []);
+
   const [selectedShipment, setSelectedShipment] = useState(null);
+  const [assigningPartner, setAssigningPartner] = useState('');
 
   // 4. Market Analysis State
   const [selectedAnalysisProduct, setSelectedAnalysisProduct] = useState('Organic Turmeric Powder');
@@ -391,6 +443,32 @@ export default function Exporter({ onNavigate }) {
     addToast(`Order #${orderId} rejected.`, 'error');
   };
 
+  const handleAssignLogistics = (orderId, partnerName) => {
+    if (!partnerName) {
+      addToast('Please select a logistics partner.', 'error');
+      return;
+    }
+    
+    // Update local orders state
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'Pending', logisticsPartner: partnerName } : o));
+    
+    // Also push updates to localStorage notifications for logistics dashboard
+    const savedNotifs = localStorage.getItem('tradewise_notifications');
+    const notifList = savedNotifs ? JSON.parse(savedNotifs) : [];
+    const newNotif = {
+      id: Date.now(),
+      text: `New Shipment Assignment for Order #${orderId} from TradeWise Exporter Ltd.`,
+      time: "Just now",
+      type: "order",
+      read: false
+    };
+    localStorage.setItem('tradewise_notifications', JSON.stringify([newNotif, ...notifList]));
+
+    addToast(`Logistics partner '${partnerName}' assigned to Order #${orderId}.`, 'success');
+    setSelectedOrder(null);
+    setAssigningPartner('');
+  };
+
   const handleLogout = () => {
     addToast('Logging out...', 'success');
     setTimeout(() => {
@@ -448,7 +526,7 @@ export default function Exporter({ onNavigate }) {
             onClick={() => setActiveView('overview')}
             className={`transition-colors h-full px-1 cursor-pointer relative ${activeView === 'overview' ? 'text-sky-655 font-extrabold' : 'hover:text-slate-950'}`}
           >
-            Workspace
+            Overview
             {activeView === 'overview' && <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-sky-500 rounded-t-full"></div>}
           </button>
 
@@ -2385,16 +2463,38 @@ export default function Exporter({ onNavigate }) {
                           Reject Order
                         </button>
                       </>
+                    ) : selectedOrder.status === 'Accepted' && (!selectedOrder.logisticsPartner || selectedOrder.logisticsPartner === 'TBD') ? (
+                      <div className="w-full space-y-2">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Assign Logistics Partner</span>
+                        <div className="flex gap-2 items-center">
+                          <select 
+                            value={assigningPartner}
+                            onChange={(e) => setAssigningPartner(e.target.value)}
+                            className="flex-grow px-3.5 py-2.5 border border-slate-200 bg-white rounded-xl text-xs font-semibold focus:outline-none focus:border-sky-500 cursor-pointer"
+                          >
+                            <option value="">Select Partner...</option>
+                            <option>FastCargo Logistics</option>
+                            <option>GlobalShip Inc.</option>
+                            <option>TransWorld Logistics</option>
+                          </select>
+                          <button
+                            onClick={() => handleAssignLogistics(selectedOrder.id, assigningPartner)}
+                            className="px-4 py-2.5 bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold rounded-xl shadow transition-all cursor-pointer"
+                          >
+                            Assign
+                          </button>
+                        </div>
+                      </div>
                     ) : (
                       <button 
                         onClick={() => {
                           setSelectedShipment(shipments.find(s => s.orderId === selectedOrder.id) || null);
                           setSelectedOrder(null);
-                          if (selectedOrder.status === 'Shipped') setActiveView('logistics');
+                          setActiveView('logistics');
                         }}
                         className="w-full py-3 text-xs font-bold text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-xl transition-all cursor-pointer"
                       >
-                        {selectedOrder.status === 'Shipped' ? 'Track Shipment →' : 'Logistics details locked'}
+                        {selectedOrder.logisticsPartner ? `Track with ${selectedOrder.logisticsPartner} →` : 'Track Shipment →'}
                       </button>
                     )}
                   </div>
